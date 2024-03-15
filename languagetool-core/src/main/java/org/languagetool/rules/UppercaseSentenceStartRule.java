@@ -30,7 +30,8 @@ import org.languagetool.AnalyzedTokenReadings;
 import org.languagetool.Language;
 import org.languagetool.tokenizers.WordTokenizer;
 import org.languagetool.tools.StringTools;
-import org.languagetool.tools.Tools;
+
+import static java.util.regex.Pattern.compile;
 
 /**
  * Checks that a sentence starts with an uppercase letter.
@@ -40,17 +41,21 @@ import org.languagetool.tools.Tools;
 public class UppercaseSentenceStartRule extends TextLevelRule {
 
   private static final Pattern NUMERALS_EN =
-          Pattern.compile("[a-z]|(m{0,4}(c[md]|d?c{0,3})(x[cl]|l?x{0,3})(i[xv]|v?i{0,3}))$");
-  private static final Pattern WHITESPACE_OR_QUOTE = Pattern.compile("[ \"'„«»‘’“”\\n]"); //only ending quote is necessary?
-  private static final Pattern SENTENCE_END1 = Pattern.compile("[.?!…]|");
+          compile("[a-z]|(m{0,4}(c[md]|d?c{0,3})(x[cl]|l?x{0,3})(i[xv]|v?i{0,3}))$");
+  private static final Pattern CONTAINS_DIGIT = compile(".*\\d.*");
+  private static final Pattern WHITESPACE_OR_QUOTE = compile("[ \"'„«»‘’“”\\n]"); //only ending quote is necessary?
+  private static final Pattern SENTENCE_END1 = compile("[.?!…]|");
   private static final Set<String> EXCEPTIONS = new HashSet<>(Arrays.asList(
           "n", // n/a
           "w", // w/o
           "x86",
           "ⓒ",
           "ø", // used as bullet point
-          "cc" // cc @daniel => "Cc @daniel" is strange
+          "cc", // cc @daniel => "Cc @daniel" is strange
+          "pH"
   ));
+  private static final Pattern DIGIT_DOT = compile("\\d+\\. .*");
+  private static final Pattern LINEBREAK_DIGIT_DOT = compile(".*\n\\d+\\. ");
 
   private final Language language;
 
@@ -91,6 +96,10 @@ public class UppercaseSentenceStartRule extends TextLevelRule {
     return messages.getString("desc_uppercase_sentence");
   }
 
+  protected boolean isException(AnalyzedTokenReadings[] tokens, int tokenIdx) {
+    return false;
+  }
+
   @Override
   public RuleMatch[] match(List<AnalyzedSentence> sentences) throws IOException {
     String lastParagraphString = "";
@@ -123,6 +132,10 @@ public class UppercaseSentenceStartRule extends TextLevelRule {
         matchTokenPos = 3;
       }
 
+      if (isException(tokens, matchTokenPos)) {
+        return toRuleMatchArray(ruleMatches);
+      }
+
       String checkToken = firstToken;
       if (thirdToken != null) {
         checkToken = thirdToken;
@@ -138,6 +151,9 @@ public class UppercaseSentenceStartRule extends TextLevelRule {
 
       boolean preventError = false;
       if (lastParagraphString.equals(",") || lastParagraphString.equals(";")) {
+        preventError = true;
+      }
+      if (CONTAINS_DIGIT.matcher(tokens[matchTokenPos].getToken()).matches()) {
         preventError = true;
       }
       if (!SENTENCE_END1.matcher(lastParagraphString).matches() && !isSentenceEnd(lastToken)) {
@@ -156,18 +172,22 @@ public class UppercaseSentenceStartRule extends TextLevelRule {
         preventError = true;
       }
 
-      if (isPrevSentenceNumberedList || isUrl(checkToken) || isEMail(checkToken) || firstTokenObj.isImmunized()) {
+      if (isPrevSentenceNumberedList || isUrl(checkToken) || isEMail(checkToken) || firstTokenObj.isImmunized()
+          || tokens[matchTokenPos].hasPosTag("_IS_URL")) {
         preventError = true;
       }
 
       if (checkToken.length() > 0) {
         char firstChar = checkToken.charAt(0);
-        if (!preventError && Character.isLowerCase(firstChar) && !EXCEPTIONS.contains(checkToken) && !StringTools.isCamelCase(checkToken)) {
+        String capitalized = StringTools.uppercaseFirstChar(checkToken);
+        if (!capitalized.equals(checkToken) &&
+          !preventError && Character.isLowerCase(firstChar)
+          && !EXCEPTIONS.contains(checkToken) && !StringTools.isCamelCase(checkToken)) {
           RuleMatch ruleMatch = new RuleMatch(this, sentence,
                   pos+tokens[matchTokenPos].getStartPos(),
                   pos+tokens[matchTokenPos].getEndPos(),
                   messages.getString("incorrect_case"));
-          ruleMatch.setSuggestedReplacement(StringTools.uppercaseFirstChar(checkToken));
+          ruleMatch.setSuggestedReplacement(capitalized);
           ruleMatches.add(ruleMatch);
         }
       }
@@ -176,7 +196,7 @@ public class UppercaseSentenceStartRule extends TextLevelRule {
       // work around that here so the items don't create an error when starting lowercase:
       // 1. item one
       // 2. item two
-      isPrevSentenceNumberedList = sentence.getText().matches("\\d+\\. .*") || sentence.getText().matches(".*\n\\d+\\. ");
+      isPrevSentenceNumberedList = DIGIT_DOT.matcher(sentence.getText()).matches() || LINEBREAK_DIGIT_DOT.matcher(sentence.getText()).matches();
     }
     return toRuleMatchArray(ruleMatches);
   }
@@ -211,7 +231,20 @@ public class UppercaseSentenceStartRule extends TextLevelRule {
   }
 
   private boolean isQuoteStart(String word) {
-    return StringUtils.equalsAny(word, "\"", "'", "„", "»", "«", "“", "‘", "¡", "¿");
+    String[] baseQuoteStrings = { "\"", "'", "„", "»", "«", "“", "‘", "¡", "¿" };
+    // pt-BR uses dashes to introduce dialogue >:(
+    // will keep it separate as other locales may expect line-initial m-dashes
+    // in enumerations not to introduce capital letters
+    String[] searchStrings;
+    if (language.getShortCode().equals("pt")) {
+      String[] portugueseDialogueDashes = { "-", "–", "—" };
+      searchStrings = new String[baseQuoteStrings.length + portugueseDialogueDashes.length];
+      System.arraycopy(baseQuoteStrings, 0, searchStrings, 0, baseQuoteStrings.length);
+      System.arraycopy(portugueseDialogueDashes, 0, searchStrings, baseQuoteStrings.length, portugueseDialogueDashes.length);
+    } else {
+      searchStrings = baseQuoteStrings;
+    }
+    return StringUtils.equalsAny(word, searchStrings);
   }
 
   @Override

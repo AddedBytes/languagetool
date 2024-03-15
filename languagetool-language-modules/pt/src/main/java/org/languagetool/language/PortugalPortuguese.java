@@ -43,29 +43,47 @@ public class PortugalPortuguese extends Portuguese {
 
   @Override
   public List<Rule> getRelevantRules(ResourceBundle messages, UserConfig userConfig, Language motherTongue, List<Language> altLanguages) throws IOException {
-    List<Rule> rules = new ArrayList<>();
-    rules.addAll(super.getRelevantRules(messages, userConfig, motherTongue, altLanguages));
+    List<Rule> rules = new ArrayList<>(super.getRelevantRules(messages, userConfig, motherTongue, altLanguages));
     rules.add(new PostReformPortugueseCompoundRule(messages, this, userConfig));
     rules.add(new PostReformPortugueseDashRule(messages));
-    rules.add(new PortugalPortugueseReplaceRule(messages, "/pt/pt-PT/replace.txt"));
-    rules.add(new PortugueseAgreementReplaceRule(messages));
-    rules.add(new PortugueseBarbarismsRule(messages, "/pt/barbarisms-pt-PT.txt"));
-    rules.add(new PortugueseArchaismsRule(messages, "/pt/archaisms-pt-PT.txt"));
+    rules.add(new PortugueseAgreementReplaceRule(messages, this));
+    rules.add(new PortugalPortugueseReplaceRule(messages, "/pt/pt-PT/replace.txt", this));
+    rules.add(new PortugueseBarbarismsRule(messages, "/pt/pt-PT/barbarisms.txt", this));
+    rules.add(new PortugueseArchaismsRule(messages, "/pt/pt-PT/archaisms.txt", this));
+    rules.add(new PortugueseClicheRule(messages, "/pt/pt-PT/cliches.txt", this));
+    rules.add(new PortugueseRedundancyRule(messages, "/pt/pt-PT/redundancies.txt", this));
+    rules.add(new PortugueseWordinessRule(messages, "/pt/pt-PT/wordiness.txt", this));
+    rules.add(new PortugueseWikipediaRule(messages, "/pt/pt-PT/wikipedia.txt", this));
     return rules;
+  }
+  
+  private final static Map<String, Integer> id2prio = new HashMap<>();
+  static {
+    id2prio.put("PT_COMPOUNDS_POST_REFORM", 1);
+    id2prio.put("PORTUGUESE_OLD_SPELLING_INTERNAL", -9);	  
+  }
+
+  @Override
+  public Map<String, Integer> getPriorityMap() {
+    return id2prio;
   }
 
   @Override
   protected int getPriorityForId(String id) {
-    switch (id) {
-      case "PT_COMPOUNDS_POST_REFORM":         return  1;
-      case "PORTUGUESE_OLD_SPELLING_INTERNAL": return -9;
+    Integer prio = id2prio.get(id);
+    if (prio != null) {
+      return prio;
     }
     return super.getPriorityForId(id);
   }
 
-  @Nullable
   @Override
-  protected SpellingCheckRule createDefaultSpellingRule(ResourceBundle messages) throws IOException {
-    return new HunspellRule(messages, this, null, null);
+  public String getOpeningDoubleQuote() {
+    return "«";
+  }
+
+  @Override
+  public String getClosingDoubleQuote() {
+    return "»";
   }
 }

@@ -31,6 +31,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.jetbrains.annotations.Nullable;
 import org.languagetool.JLanguageTool;
+import org.languagetool.Language;
+import org.languagetool.rules.AbstractStatisticSentenceStyleRule;
+import org.languagetool.rules.AbstractStatisticStyleRule;
+import org.languagetool.rules.AbstractStyleTooOftenUsedWordRule;
+import org.languagetool.rules.ReadabilityRule;
+import org.languagetool.rules.Rule;
 
 import com.sun.star.awt.XMenuBar;
 import com.sun.star.awt.XPopupMenu;
@@ -50,6 +56,7 @@ import com.sun.star.lang.Locale;
 import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
+import com.sun.star.linguistic2.XProofreadingIterator;
 import com.sun.star.linguistic2.XSearchableDictionaryList;
 import com.sun.star.text.XTextDocument;
 import com.sun.star.ui.XUIElement;
@@ -61,7 +68,7 @@ import com.sun.star.uno.XComponentContext;
  * @since 4.3
  * @author Fred Kruse
  */
-class OfficeTools {
+public class OfficeTools {
   
   public enum DocumentType {
     WRITER,       //  Writer document
@@ -77,8 +84,15 @@ class OfficeTools {
     ONLY_GRAMMAR  //  only grammar check
   }
     
+  public enum LoErrorType {
+    GRAMMAR,      //  grammar error
+    SPELL,        //  spell error
+    BOTH          //  spell and grammar error
+  }
+    
   public static final String EXTENSION_MAINTAINER = "Fred Kruse";
   public static final String LT_SERVICE_NAME = "org.languagetool.openoffice.Main";
+  public static final String LT_SPELL_SERVICE_NAME = "org.languagetool.openoffice.LanguageToolSpellChecker";
   public static final int PROOFINFO_UNKNOWN = 0;
   public static final int PROOFINFO_GET_PROOFRESULT = 1;
   public static final int PROOFINFO_MARK_PARAGRAPH = 2;
@@ -91,11 +105,12 @@ class OfficeTools {
   public static final char ZERO_WIDTH_SPACE_CHAR = '\u200B'; // Used to mark footnotes, functions, etc.
   public static final String IGNORE_LANGUAGE = "zxx";     // Used from LT to mark automatic generated text like indexes
   public static final String LOG_LINE_BREAK = System.lineSeparator();  //  LineBreak in Log-File (MS-Windows compatible)
-  public static final int MAX_SUGGESTIONS = 15;           // Number of suggestions maximal shown in LO/OO
+  public static final int MAX_SUGGESTIONS = 25;           // Number of suggestions maximal shown in LO/OO
   public static final int NUMBER_TEXTLEVEL_CACHE = 4;     // Number of caches for matches of text level rules
   public static final String MULTILINGUAL_LABEL = "99-";  // Label added in front of variant to indicate a multilingual paragraph (returned is the main language)
   public static final int CHECK_MULTIPLIKATOR = 40;       //  Number of minimum checks for a first check run
   public static final int CHECK_SHAPES_TIME = 1000;       //  time interval to run check for changes in text inside of shapes
+  public static final int SPELL_CHECK_MIN_HEAP = 850;     //  Minimal heap space to run LT spell check
   public static int TIME_TOLERANCE = 100;                 //  Minimal milliseconds to show message in TM debug mode
   
   public static int DEBUG_MODE_SD = 0;            //  Set Debug Mode for SingleDocument
@@ -111,12 +126,14 @@ class OfficeTools {
   public static boolean DEBUG_MODE_IO = false;    //  Activate Debug Mode for Cache save to file
   public static boolean DEBUG_MODE_SR = false;    //  Activate Debug Mode for SortedTextRules
   public static boolean DEBUG_MODE_TM = false;    //  Activate Debug Mode for time measurements
+  public static boolean DEVELOP_MODE_ST = false;  //  Activate Development Mode to test sorted text IDs
   public static boolean DEVELOP_MODE = false;     //  Activate Development Mode
 
   public  static final String CONFIG_FILE = "Languagetool.cfg";
   public  static final String OOO_CONFIG_FILE = "Languagetool-ooo.cfg";
   private static final String OLD_CONFIG_FILE = ".languagetool-ooo.cfg";
   private static final String LOG_FILE = "LanguageTool.log";
+  public  static final String STATISTICAL_ANALYZES_CONFIG_FILE = "LT_Statistical_Analyzes.cfg";
 
   private static final String VENDOR_ID = "languagetool.org";
   private static final String APPLICATION_ID = "LanguageTool";
@@ -127,10 +144,20 @@ class OfficeTools {
   private static final String MENU_BAR = "private:resource/menubar/menubar";
   private static final String LOG_DELIMITER = ",";
   
+
   private static final double LT_HEAP_LIMIT_FACTOR = 0.9;
   private static double MAX_HEAP_SPACE = -1;
   private static double LT_HEAP_LIMIT = -1;
+  
+  private final static int MAX_LO_WAITS = 3000;
+  private static int numLoWaits = 0;
+  private static Object waitObj = new Object();
 
+/*
+  private static final long KEY_RELEASE_TOLERANCE = 500;
+  private static long lastKeyRelease = 0;
+*/
+  
   /**
    * Returns the XDesktop
    * Returns null if it fails
@@ -162,7 +189,7 @@ class OfficeTools {
    * Returns null if it fails
    */
   @Nullable
-  static XComponent getCurrentComponent(XComponentContext xContext) {
+  public static XComponent getCurrentComponent(XComponentContext xContext) {
     try {
       XDesktop xdesktop = getDesktop(xContext);
       if (xdesktop == null) {
@@ -226,6 +253,32 @@ class OfficeTools {
         return null;
       }
       return UnoRuntime.queryInterface(XSearchableDictionaryList.class, dictionaryList);
+    } catch (Throwable t) {
+      MessageHandler.printException(t);     // all Exceptions thrown by UnoRuntime.queryInterface are caught
+      return null;           // Return null as method failed
+    }
+  }
+
+  /**
+   * Returns the searchable dictionary list
+   * Returns null if it fails
+   */
+  @Nullable
+  static XProofreadingIterator getProofreadingIterator(XComponentContext xContext) {
+    try {
+      if (xContext == null) {
+        return null;
+      }
+      XMultiComponentFactory xMCF = UnoRuntime.queryInterface(XMultiComponentFactory.class,
+              xContext.getServiceManager());
+      if (xMCF == null) {
+        return null;
+      }
+      Object proofreadingIterator = xMCF.createInstanceWithContext("com.sun.star.linguistic2.ProofreadingIterator", xContext);
+      if (proofreadingIterator == null) {
+        return null;
+      }
+      return UnoRuntime.queryInterface(XProofreadingIterator.class, proofreadingIterator);
     } catch (Throwable t) {
       MessageHandler.printException(t);     // all Exceptions thrown by UnoRuntime.queryInterface are caught
       return null;           // Return null as method failed
@@ -362,6 +415,9 @@ class OfficeTools {
    *  Get a String from local
    */
   static String localeToString(Locale locale) {
+    if (locale == null) {
+      return null;
+    }
     return locale.Language + (locale.Country.isEmpty() ? "" : "-" + locale.Country) + (locale.Variant.isEmpty() ? "" : "-" + locale.Variant);
   }
 
@@ -486,6 +542,13 @@ class OfficeTools {
   public static String getLogFilePath(XComponentContext xContext) {
     return new File(getLOConfigDir(xContext), LOG_FILE).getAbsolutePath();
   }
+  
+  /**
+   * Returns statistical analyzes configuration file 
+   */
+  public static String getStatisticalConfigFilePath() {
+    return new File(getLOConfigDir(), STATISTICAL_ANALYZES_CONFIG_FILE).getAbsolutePath();
+  }
 
   /**
    * Returns directory to saves caches
@@ -503,7 +566,7 @@ class OfficeTools {
     return cacheDir;
   }
   
-  private static double getMaxHeapSpace() {
+  public static double getMaxHeapSpace() {
     if(MAX_HEAP_SPACE < 0) {
       MAX_HEAP_SPACE = Runtime.getRuntime().maxMemory();
     }
@@ -633,6 +696,77 @@ class OfficeTools {
   }
   
   /**
+   * timestamp for last key release
+   *//*
+  public static void setKeyReleaseTime(long time) {
+    lastKeyRelease = time;
+  }
+*/
+  public static void waitForLO() {
+    while (DocumentCursorTools.isBusy() || ViewCursorTools.isBusy() || FlatParagraphTools.isBusy()) {
+      try {
+        synchronized (waitObj) {
+          numLoWaits++;
+          if (numLoWaits > MAX_LO_WAITS) {
+            MessageHandler.printToLogFile("waitForLO: Wait for more than " + MAX_LO_WAITS/100 + " seconds, "
+                + "DocumentCursorTools.isBusy: " + DocumentCursorTools.isBusy() + ", "
+                + "ViewCursorTools.isBusy: " + ViewCursorTools.isBusy() + ", "
+                + "FlatParagraphTools.isBusy: " + FlatParagraphTools.isBusy() + ": "
+                + "Free Lock and continue.");
+            if (DocumentCursorTools.isBusy()) {
+              DocumentCursorTools.reset();
+            }
+            if (ViewCursorTools.isBusy()) {
+              ViewCursorTools.reset();
+            }
+            if (FlatParagraphTools.isBusy()) {
+              FlatParagraphTools.reset();
+            }
+          }
+        }
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        MessageHandler.printException(e);
+      }
+    }
+  }
+/*  
+  public static void waitForLoDic() {
+    long spellDiff = KEY_RELEASE_TOLERANCE - System.currentTimeMillis() + lastKeyRelease;
+    while (DocumentCursorTools.isBusy() || ViewCursorTools.isBusy() || FlatParagraphTools.isBusy() || spellDiff > 0) {
+      try {
+        Thread.sleep(spellDiff < 10 ? 10 : spellDiff);
+      } catch (InterruptedException e) {
+        MessageHandler.printException(e);
+      }
+      spellDiff = KEY_RELEASE_TOLERANCE - System.currentTimeMillis() + lastKeyRelease;
+    }
+  }
+*/  
+  public static void waitForLtDictionary() {
+    while (LtDictionary.isActivating()) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        MessageHandler.printException(e);
+      }
+    }
+  }
+  
+  public static boolean hasStatisticalStyleRules(Language lang) {
+    try {
+      for (Rule rule : lang.getRelevantRules(JLanguageTool.getMessageBundle(), null, lang, null)) {
+        if (rule instanceof AbstractStatisticSentenceStyleRule || rule instanceof AbstractStatisticStyleRule ||
+            rule instanceof ReadabilityRule || rule instanceof AbstractStyleTooOftenUsedWordRule) {
+          return true;
+        }
+      }
+    } catch (IOException e) {
+    }
+    return false;
+  }
+  
+  /**
    * Handle logLevel for debugging and development
    */
   static void setLogLevel(String logLevel) {
@@ -714,6 +848,8 @@ class OfficeTools {
               }
             }
           }
+        } else if (level.equals("st")) {
+          DEVELOP_MODE_ST = true;
         } else if (level.equals("dev")) {
           DEVELOP_MODE = true;
         }
@@ -730,21 +866,21 @@ class OfficeTools {
     public final String osArch;
     
     OfficeProductInfo(Object name, Object version, Object extension, Object vendor, Object locale, Object arch) {
-      ooName = (String) name;
-      ooVersion = (String) version;
-      ooExtension = (String) extension;
-      ooVendor = (String) vendor;
-      ooLocale = (String) locale;
-      osArch = (String) arch;
+      ooName = new String((String) name);
+      ooVersion = new String((String) version);
+      ooExtension = new String((String) extension);
+      ooVendor = new String((String) vendor);
+      ooLocale = new String((String) locale);
+      osArch = new String((String) arch);
     }
     
     OfficeProductInfo(String name, String version, String extension, String vendor, String locale, String arch) {
-      ooName = name;
-      ooVersion = version;
-      ooExtension = extension;
-      ooVendor = vendor;
-      ooLocale = locale;
-      osArch = arch;
+      ooName = new String(name);
+      ooVersion = new String(version);
+      ooExtension = new String(extension);
+      ooVendor = new String(vendor);
+      ooLocale = new String(locale);
+      osArch = new String(arch);
     }
   }
 }

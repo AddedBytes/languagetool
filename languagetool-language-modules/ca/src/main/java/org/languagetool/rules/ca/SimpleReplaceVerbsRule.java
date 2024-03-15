@@ -35,6 +35,7 @@ import org.languagetool.Language;
 import org.languagetool.rules.*;
 import org.languagetool.synthesis.ca.CatalanSynthesizer;
 import org.languagetool.tagging.ca.CatalanTagger;
+import org.languagetool.tools.StringTools;
 
 /**
  * A rule that matches incorrect verbs (including all inflected forms) and
@@ -49,7 +50,7 @@ public class SimpleReplaceVerbsRule extends AbstractSimpleReplaceRule {
   private static final Locale CA_LOCALE = new Locale("CA");
 
   @Override
-  protected Map<String, List<String>> getWrongWords() {
+  public Map<String, List<String>> getWrongWords() {
     return wrongWords;
   }
 
@@ -61,12 +62,13 @@ public class SimpleReplaceVerbsRule extends AbstractSimpleReplaceRule {
   private final CatalanSynthesizer synth;
 
   public SimpleReplaceVerbsRule(final ResourceBundle messages, Language language) {
-    super(messages);
+    super(messages, language);
     super.setCategory(Categories.TYPOS.getCategory(messages));
     super.setLocQualityIssueType(ITSIssueType.Misspelling);
     super.setIgnoreTaggedWords();
     tagger = (CatalanTagger) language.getTagger();
     synth = (CatalanSynthesizer) language.getSynthesizer();
+    super.useSubRuleSpecificIds();
   }
 
   @Override
@@ -76,7 +78,7 @@ public class SimpleReplaceVerbsRule extends AbstractSimpleReplaceRule {
 
   @Override
   public String getDescription() {
-    return "Detecta verbs incorrectes i proposa suggeriments de canvi";
+    return "Verb incorrecte: $match";
   }
 
   @Override
@@ -190,10 +192,10 @@ public class SimpleReplaceVerbsRule extends AbstractSimpleReplaceRule {
         List<String> replacementInfinitives = wrongWords.get(infinitive);
         for (String replacementInfinitive : replacementInfinitives) {
           if (replacementInfinitive.startsWith("(")) {
-            possibleReplacements.add(replacementInfinitive);
+            possibleReplacements.add(StringTools.preserveCase(replacementInfinitive, originalTokenStr));
           } else {
-            String[] parts = replacementInfinitive.split(" "); // the first part
-                                                               // is the verb
+            // the first part is the verb
+            String[] parts = replacementInfinitive.split(" "); 
             AnalyzedToken infinitiveAsAnTkn = new AnalyzedToken(parts[0], "V.*", parts[0]);
             for (AnalyzedToken analyzedToken : analyzedTokenReadings) {
               try {
@@ -210,8 +212,9 @@ public class SimpleReplaceVerbsRule extends AbstractSimpleReplaceRule {
                 for (int j = 1; j < parts.length; j++) {
                   s = s.concat(" ").concat(parts[j]);
                 }
-                if (!possibleReplacements.contains(s)) {
-                  possibleReplacements.add(s);
+                String ps = StringTools.preserveCase(s, originalTokenStr);
+                if (!possibleReplacements.contains(ps)) {
+                  possibleReplacements.add(ps);
                 }
               }
             }

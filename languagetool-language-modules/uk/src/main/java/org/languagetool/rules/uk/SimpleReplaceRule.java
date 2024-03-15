@@ -24,10 +24,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
-import org.languagetool.AnalyzedSentence;
-import org.languagetool.AnalyzedToken;
-import org.languagetool.AnalyzedTokenReadings;
-import org.languagetool.JLanguageTool;
+import org.languagetool.*;
 import org.languagetool.rules.AbstractSimpleReplaceRule;
 import org.languagetool.rules.RuleMatch;
 import org.languagetool.tagging.uk.IPOSTag;
@@ -50,12 +47,13 @@ public class SimpleReplaceRule extends AbstractSimpleReplaceRule {
   private final MorfologikUkrainianSpellerRule morfologikSpellerRule;
 
   @Override
-  protected Map<String, List<String>> getWrongWords() {
+  public Map<String, List<String>> getWrongWords() {
     return wrongWords;
   }
 
-  public SimpleReplaceRule(ResourceBundle messages, MorfologikUkrainianSpellerRule morfologikSpellerRule) throws IOException {
-    super(messages);
+  public SimpleReplaceRule(ResourceBundle messages, MorfologikUkrainianSpellerRule morfologikSpellerRule,
+                           final Language language) throws IOException {
+    super(messages, language);
     setIgnoreTaggedWords();
     this.morfologikSpellerRule = morfologikSpellerRule;
   }
@@ -127,9 +125,7 @@ public class SimpleReplaceRule extends AbstractSimpleReplaceRule {
       }
       else {
         if( PosTagHelper.hasPosTagPart(tokenReadings, ":bad") 
-            && ! PosTagHelper.hasPosTagStart(tokenReadings, "number")
-            && ! "чоловік".equalsIgnoreCase(tokenReadings.getToken()) ) {
-//          try {
+            && ! PosTagHelper.hasPosTagStart(tokenReadings, "number") ) {
             String msg = "Неправильно написане слово.";
 
             RuleMatch match = new RuleMatch(this, sentence, tokenReadings.getStartPos(), tokenReadings.getStartPos()
@@ -142,25 +138,20 @@ public class SimpleReplaceRule extends AbstractSimpleReplaceRule {
 //            if( spellerMatches.length > 0 ) {
 //              match.setSuggestedReplacements(spellerMatches[0].getSuggestedReplacements());
 //            }
-
             matches.add(match);
-//          }
-//          catch (IOException e) {
-//            throw new RuntimeException(e);
-//          }
         }
       }
     }
-    else {
-      if( PosTagHelper.hasPosTag(tokenReadings, Pattern.compile("(?!verb).*:subst")) ) {
-        for(int i=0; i<matches.size(); i++) {
-          RuleMatch match = matches.get(i);
-          RuleMatch newMatch = new RuleMatch(match.getRule(), match.getSentence(), match.getFromPos(), match.getToPos(), "Це розмовна просторічна форма");
-          newMatch.setSuggestedReplacements(match.getSuggestedReplacements());
-          matches.set(i, newMatch);
-        }
-      }
-    }
+//    else {
+//      if( PosTagHelper.hasPosTag(tokenReadings, Pattern.compile("(?!verb).*:subst")) ) {
+//        for(int i=0; i<matches.size(); i++) {
+//          RuleMatch match = matches.get(i);
+//          RuleMatch newMatch = new RuleMatch(match.getRule(), match.getSentence(), match.getFromPos(), match.getToPos(), "Ця форма не відповідає мовній нормі");
+//          newMatch.setSuggestedReplacements(match.getSuggestedReplacements());
+//          matches.set(i, newMatch);
+//        }
+//      }
+//    }
     return matches;
   }
 

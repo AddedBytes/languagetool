@@ -18,11 +18,14 @@
  */
 package org.languagetool.language;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 
 import org.jetbrains.annotations.NotNull;
+import org.languagetool.Language;
+import org.languagetool.UserConfig;
+import org.languagetool.rules.*;
+import org.languagetool.rules.ca.*;
 import org.languagetool.tagging.Tagger;
 import org.languagetool.tagging.ca.CatalanTagger;
 
@@ -50,6 +53,13 @@ public class ValencianCatalan extends Catalan {
   }
 
   @Override
+  public List<Rule> getRelevantRules(ResourceBundle messages, UserConfig userConfig, Language motherTongue, List<Language> altLanguages) throws IOException {
+    List<Rule> relevantRules = new ArrayList<>(super.getRelevantRules(messages, userConfig, motherTongue,altLanguages));
+    relevantRules.add(new WordCoherencyValencianRule(messages));
+    return relevantRules;
+  }
+
+  @Override
   public List<String> getDefaultEnabledRulesForVariant() {
     List<String> rules = Arrays.asList("EXIGEIX_VERBS_VALENCIANS", "EXIGEIX_ACCENTUACIO_VALENCIANA",
         "EXIGEIX_POSSESSIUS_U", "EXIGEIX_VERBS_EIX", "EXIGEIX_VERBS_ISC", "PER_PER_A_INFINITIU", "FINS_EL_AVL");
@@ -60,7 +70,8 @@ public class ValencianCatalan extends Catalan {
   public List<String> getDefaultDisabledRulesForVariant() {
     // Important: Java rules are not disabled here
     List<String> rules = Arrays.asList("EXIGEIX_VERBS_CENTRAL", "EXIGEIX_ACCENTUACIO_GENERAL", "EXIGEIX_POSSESSIUS_V",
-        "EVITA_PRONOMS_VALENCIANS", "EVITA_DEMOSTRATIUS_EIXE", "VOCABULARI_VALENCIA", "EXIGEIX_US", "FINS_EL_GENERAL");
+        "EVITA_PRONOMS_VALENCIANS", "EVITA_DEMOSTRATIUS_EIXE", "VOCABULARI_VALENCIA", "EXIGEIX_US", "FINS_EL_GENERAL", 
+        "EVITA_INFINITIUS_INDRE", "EVITA_DEMOSTRATIUS_ESTE");
     return Collections.unmodifiableList(rules);
   }
   

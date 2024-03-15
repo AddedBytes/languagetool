@@ -20,9 +20,14 @@ package org.languagetool.tagging.es;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.languagetool.Languages;
 import org.languagetool.TestTools;
 import org.languagetool.language.Spanish;
+import org.languagetool.tagging.disambiguation.es.SpanishHybridDisambiguator;
+import org.languagetool.tokenizers.SRXSentenceTokenizer;
+import org.languagetool.tokenizers.SentenceTokenizer;
 import org.languagetool.tokenizers.WordTokenizer;
+import org.languagetool.tokenizers.es.SpanishWordTokenizer;
 
 import java.io.IOException;
 
@@ -30,11 +35,16 @@ public class SpanishTaggerTest {
 
   private SpanishTagger tagger;
   private WordTokenizer tokenizer;
+  private SpanishHybridDisambiguator disambiguator;
+  private SentenceTokenizer sentenceTokenizer;
+
 
   @Before
   public void setUp() {
     tagger = SpanishTagger.INSTANCE;
-    tokenizer = new WordTokenizer();
+    tokenizer = new SpanishWordTokenizer();
+    disambiguator = new SpanishHybridDisambiguator(Languages.getLanguageForShortCode("es"));
+    sentenceTokenizer = new SRXSentenceTokenizer(Languages.getLanguageForShortCode("es"));
   }
 
   @Test
@@ -48,6 +58,7 @@ public class SpanishTaggerTest {
     TestTools.myAssert("DESTACADAMENTE", "DESTACADAMENTE/[destacadamente]RG", tokenizer, tagger);
     TestTools.myAssert("alucinadamente", "alucinadamente/[alucinadamente]RG", tokenizer, tagger);
     TestTools.myAssert("disputadamente", "disputadamente/[disputadamente]RG", tokenizer, tagger);
+    TestTools.myAssert("superincómodas", "superincómodas/[superincómodo]AQ0FP0", tokenizer, tagger);
     
     // all-upper case that is common noun & proper noun
     TestTools.myAssert("RIOJA", "RIOJA/[Rioja]NPCNG00|RIOJA/[rioja]NCMS000", tokenizer, tagger);
@@ -69,5 +80,14 @@ public class SpanishTaggerTest {
     TestTools.myAssert("económico-sociales", "económico-sociales/[económico-social]AQ0CP0", tokenizer, tagger);
     TestTools.myAssert("jurídico-económicas", "jurídico-económicas/[jurídico-económico]AQ0FP0", tokenizer, tagger);
 
+  }
+
+  @Test
+  public void testDisambiguator() throws IOException {
+    TestTools
+      .myAssert(
+        "Era muy muy ",
+        "/[null]SENT_START Era/[erar]VMIP3S0|Era/[erar]VMM02S0|Era/[ser]VSII1S0|Era/[ser]VSII3S0  /[null]null muy/[muy muy]LOC_ADV|muy/[muy]_allow_repeat  /[null]null muy/[muy muy]LOC_ADV  /[null]null",
+        tokenizer, sentenceTokenizer, tagger, disambiguator);
   }
 }

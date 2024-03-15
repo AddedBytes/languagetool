@@ -110,7 +110,7 @@ public class FlatParagraphTools {
    * Initialize XFlatParagraphIterator
    * Set the new iterator only if it is not null
    */
-  synchronized public void init() {
+  public void init() {
     isBusy++;
     try {
       XFlatParagraphIterator tmpFlatParaIter = getXFlatParagraphIterator(xComponent);
@@ -164,7 +164,7 @@ public class FlatParagraphTools {
   /**
    * is true if FlatParagraph is from Automatic Iteration
    */
-  synchronized public boolean isFlatParaFromIter() {
+  public boolean isFlatParaFromIter() {
     return (getCurrentFlatParagraph() != null);
   }
 
@@ -172,7 +172,8 @@ public class FlatParagraphTools {
    * Change text of flat paragraph nPara 
    * delete characters between nStart and nStart + nLen, insert newText at nStart
    */
-  synchronized public XFlatParagraph getFlatParagraphAt (int nPara) {
+  public XFlatParagraph getFlatParagraphAt(int nPara) {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -209,7 +210,7 @@ public class FlatParagraphTools {
    * return text of current paragraph
    * return null if it fails
    */
-  synchronized public String getCurrentParaText() {
+  public String getCurrentParaText() {
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getCurrentFlatParagraph();
@@ -219,7 +220,7 @@ public class FlatParagraphTools {
         }
         return null;
       }
-      return xFlatPara.getText();
+      return new String(xFlatPara.getText());
     } finally {
       isBusy--;
     }
@@ -229,7 +230,7 @@ public class FlatParagraphTools {
    * Returns Current Paragraph Number from FlatParagaph
    * Returns -1 if it fails
    */
-  synchronized public int getCurNumFlatParagraph() {
+  public int getCurNumFlatParagraph() {
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getCurrentFlatParagraph();
@@ -245,6 +246,7 @@ public class FlatParagraphTools {
         tmpXFlatPara = xFlatParaIter.getParaBefore(tmpXFlatPara);
         pos++;
       }
+      xFlatParaIter = getXFlatParagraphIterator(xComponent);
       return pos;
     } catch (Throwable t) {
       MessageHandler.printException(t);     // all Exceptions thrown by UnoRuntime.queryInterface are caught
@@ -259,7 +261,8 @@ public class FlatParagraphTools {
    * Returns null if it fails
    */
   @Nullable
-  synchronized public FlatParagraphContainer getAllFlatParagraphs(Locale fixedLocale) {
+  public FlatParagraphContainer getAllFlatParagraphs(Locale fixedLocale) {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -277,7 +280,7 @@ public class FlatParagraphTools {
       int documentElementsCount = sortedTextIds == null ? -1 : getIntPropertyValue("DocumentElementsCount", tmpFlatPara);
       Locale locale = null;
       while (tmpFlatPara != null) {
-        String text = tmpFlatPara.getText();
+        String text = new String(tmpFlatPara.getText());
         int len = text.length();
         allParas.add(0, text);
         footnotePositions.add(0, getIntArrayPropertyValue("FootnotePositions", tmpFlatPara));
@@ -291,7 +294,7 @@ public class FlatParagraphTools {
       }
       tmpFlatPara = xFlatParaIter.getParaAfter(xFlatPara);
       while (tmpFlatPara != null) {
-        String text = tmpFlatPara.getText();
+        String text = new String(tmpFlatPara.getText());
         int len = text.length();
         allParas.add(text);
         footnotePositions.add(getIntArrayPropertyValue("FootnotePositions", tmpFlatPara));
@@ -305,6 +308,7 @@ public class FlatParagraphTools {
         }
         tmpFlatPara = xFlatParaIter.getParaAfter(tmpFlatPara);
       }
+      xFlatParaIter = getXFlatParagraphIterator(xComponent);
       return new FlatParagraphContainer(allParas, locales, footnotePositions, sortedTextIds, documentElementsCount);
     } catch (Throwable t) {
       MessageHandler.printException(t);     // all Exceptions thrown by UnoRuntime.queryInterface are caught
@@ -319,7 +323,8 @@ public class FlatParagraphTools {
    * Returns null if it fails
    */
   @Nullable
-  synchronized public List<String> getFlatParagraphs(List<Integer> nParas) {
+  public List<String> getFlatParagraphs(List<Integer> nParas) {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -339,7 +344,7 @@ public class FlatParagraphTools {
       int nPara = 0;
       while (xFlatPara != null && nPara < nParas.size()) {
         if (nFlat == nParas.get(nPara)) {
-          String text = xFlatPara.getText();
+          String text = new String(xFlatPara.getText());
           sParas.add(text);
           nPara++;
         }
@@ -356,6 +361,13 @@ public class FlatParagraphTools {
   }
   
   /**
+   * Get a save Locale 
+   */
+  private static Locale getSaveLocale(String language, String country, String variant) {
+    return new Locale(new String(language), new String(country), new String(variant));
+  }
+  
+  /**
    * Get the language of paragraph 
    * @throws IllegalArgumentException 
    */
@@ -364,7 +376,7 @@ public class FlatParagraphTools {
     if (locale == null || locale.Language.isEmpty()) {
       locale = flatPara.getPrimaryLanguageOfText(first, len);
     }
-    return locale;
+    return getSaveLocale(locale.Language, locale.Country, locale.Variant);
   }
   
   /**
@@ -390,7 +402,7 @@ public class FlatParagraphTools {
    * Get the main language of paragraph 
    * @throws IllegalArgumentException 
    */
-  synchronized public static Locale getPrimaryParagraphLanguage(XFlatParagraph flatPara, int start, int len, Locale fixedLocale, 
+  public static Locale getPrimaryParagraphLanguage(XFlatParagraph flatPara, int start, int len, Locale fixedLocale, 
       Locale lastLocale, boolean onlyPrimary) throws IllegalArgumentException {
     isBusy++;
     try {
@@ -399,7 +411,7 @@ public class FlatParagraphTools {
       }
       if (len == 0 && lastLocale != null) {
         return lastLocale.Variant.startsWith(OfficeTools.MULTILINGUAL_LABEL) ? 
-            new Locale(lastLocale.Language, lastLocale.Country, lastLocale.Variant.substring(OfficeTools.MULTILINGUAL_LABEL.length())) : lastLocale;
+            getSaveLocale(lastLocale.Language, lastLocale.Country, lastLocale.Variant.substring(OfficeTools.MULTILINGUAL_LABEL.length())) : lastLocale;
       }
       if (len < 2) {
         return getParagraphLanguage(flatPara, start, len);
@@ -421,7 +433,7 @@ public class FlatParagraphTools {
       }
       if (locales.keySet().size() == 0) {
         return lastLocale.Variant.startsWith(OfficeTools.MULTILINGUAL_LABEL) ? 
-            new Locale(lastLocale.Language, lastLocale.Country, lastLocale.Variant.substring(OfficeTools.MULTILINGUAL_LABEL.length())) : lastLocale;
+            getSaveLocale(lastLocale.Language, lastLocale.Country, lastLocale.Variant.substring(OfficeTools.MULTILINGUAL_LABEL.length())) : lastLocale;
       }
       Locale biggestLocal = null;
       int biggestLocalNumber = 0;
@@ -444,7 +456,7 @@ public class FlatParagraphTools {
         if (debugMode) {
           MessageHandler.printToLogFile("FlatParagraphTools: getPrimaryParagraphLanguage: is multilingual locale: " + OfficeTools.localeToString(biggestLocal));
         }
-        return new Locale(biggestLocal.Language, biggestLocal.Country, OfficeTools.MULTILINGUAL_LABEL + biggestLocal.Variant);
+        return getSaveLocale(biggestLocal.Language, biggestLocal.Country, OfficeTools.MULTILINGUAL_LABEL + biggestLocal.Variant);
       }
     } finally {
       isBusy--;
@@ -455,7 +467,7 @@ public class FlatParagraphTools {
    * Get the main language of paragraph 
    * @throws IllegalArgumentException 
    */
-  synchronized public Locale getPrimaryLanguageOfPartOfParagraph(int nPara, int start, int len, Locale lastLocale) throws IllegalArgumentException {
+  public Locale getPrimaryLanguageOfPartOfParagraph(int nPara, int start, int len, Locale lastLocale) throws IllegalArgumentException {
     isBusy++;
     try {
       XFlatParagraph flatPara = getFlatParagraphAt(nPara);
@@ -472,7 +484,8 @@ public class FlatParagraphTools {
    * Returns Number of all FlatParagraphs of Document from current FlatParagraph
    * Returns negative value if it fails
    */
-  synchronized public int getNumberOfAllFlatPara() {
+  public int getNumberOfAllFlatPara() {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -501,6 +514,13 @@ public class FlatParagraphTools {
     } finally {
       isBusy--;
     }
+  }
+
+  /** 
+   * Returns positions of properties by name 
+   */
+  public int[] getFootnotePosition(XFlatParagraph xFlatPara) {
+    return getIntArrayPropertyValue("FootnotePositions", xFlatPara);
   }
 
   /** 
@@ -610,7 +630,8 @@ public class FlatParagraphTools {
   /**
    * Marks all paragraphs as checked with exception of the paragraphs "from" to "to"
    */
-  synchronized public void setFlatParasAsChecked(int from, int to, List<Boolean> isChecked) {
+  public void setFlatParasAsChecked(int from, int to, List<Boolean> isChecked) {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -669,7 +690,8 @@ public class FlatParagraphTools {
   /**
    * Marks all paragraphs as checked
    */
-  synchronized public void setFlatParasAsChecked() {
+  public void setFlatParasAsChecked() {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -699,7 +721,8 @@ public class FlatParagraphTools {
   /**
    * Get information of checked status of all paragraphs
    */
-  synchronized public List<Boolean> isChecked(List<Integer> changedParas, int nDiv) {
+  public List<Boolean> isChecked(List<Integer> changedParas, int nDiv) {
+    OfficeTools.waitForLO();
     isBusy++;
     List<Boolean> isChecked = new ArrayList<>();
     try {
@@ -737,7 +760,7 @@ public class FlatParagraphTools {
    * else the marks are added to the existing marks
    */
 
-  synchronized public void markParagraphs(Map<Integer, List<SentenceErrors>> changedParas) {
+  public void markParagraphs(Map<Integer, List<SentenceErrors>> changedParas) {
     isBusy++;
     try {
       if (changedParas == null || changedParas.isEmpty()) {
@@ -774,6 +797,7 @@ public class FlatParagraphTools {
       if (debugMode && tmpFlatPara == null) {
         MessageHandler.printToLogFile("FlatParagraphTools: markParagraphs: tmpFlatParagraph == null");
       }
+      xFlatParaIter = getXFlatParagraphIterator(xComponent);
     } catch (Throwable t) {
       MessageHandler.printException(t);     // all Exceptions thrown by UnoRuntime.queryInterface are caught
     } finally {
@@ -784,7 +808,7 @@ public class FlatParagraphTools {
   /**
    * add marks to existing marks of current paragraph
    */
-  synchronized public void markCurrentParagraph(List<SentenceErrors> errorList) {
+  public void markCurrentParagraph(List<SentenceErrors> errorList) {
     isBusy++;
     try {
       if (errorList == null || errorList.size() == 0) {
@@ -839,8 +863,8 @@ public class FlatParagraphTools {
         flatPara.commitStringMarkup(TextMarkupType.PROOFREADING, pError.aRuleIdentifier, 
             pError.nErrorStart, pError.nErrorLength, props);
       }
-      props = flatPara.getMarkupInfoContainer();
-      flatPara.commitStringMarkup(TextMarkupType.SENTENCE, "Sentence", errors.sentenceStart, errors.sentenceEnd - errors.sentenceStart, props);
+//      props = flatPara.getMarkupInfoContainer();
+//      flatPara.commitStringMarkup(TextMarkupType.SENTENCE, "Sentence", errors.sentenceStart, errors.sentenceEnd - errors.sentenceStart, props);
     }
     if (isChecked) {
       flatPara.setChecked(TextMarkupType.PROOFREADING, true);
@@ -851,7 +875,8 @@ public class FlatParagraphTools {
    * Change text of flat paragraph nPara 
    * delete characters between nStart and nStart + nLen, insert newText at nStart
    */
-  synchronized public void changeTextOfParagraph (int nPara, int nStart, int nLen, String newText) {
+  public void changeTextOfParagraph (int nPara, int nStart, int nLen, String newText) {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -888,7 +913,8 @@ public class FlatParagraphTools {
    * Change text of flat paragraph nPara 
    * delete characters between nStart and nStart + nLen, insert newText at nStart
    */
-  synchronized public void setLanguageOfParagraph (int nPara, int nStart, int nLen, Locale locale) {
+  public void setLanguageOfParagraph (int nPara, int nStart, int nLen, Locale locale) {
+    OfficeTools.waitForLO();
     isBusy++;
     try {
       XFlatParagraph xFlatPara = getLastFlatParagraph();
@@ -928,6 +954,13 @@ public class FlatParagraphTools {
    */
   public static boolean isBusy() {
     return isBusy > 0;
+  }
+  
+  /**
+   *  Reset the busy flag
+   */
+  public static void reset() {
+    isBusy = 0;
   }
   
   public static class FlatParagraphContainer {

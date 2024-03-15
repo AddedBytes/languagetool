@@ -19,6 +19,7 @@
 package org.languagetool.rules.ru;
 
 import java.util.ResourceBundle;
+import java.util.regex.Pattern;
 
 import org.languagetool.AnalyzedTokenReadings;
 import org.languagetool.Language;
@@ -30,25 +31,22 @@ import org.languagetool.rules.WordRepeatRule;
  */
 public class RussianSimpleWordRepeatRule extends WordRepeatRule {
 
+  private static final Pattern PATTERN = Pattern.compile("[a-zA-Zа-яёА-ЯЁ]");
+
   public RussianSimpleWordRepeatRule(ResourceBundle messages, Language language) {
     super(messages, language);
   }
 
   @Override
-  public String getId() {
-    return "WORD_REPEAT_RULE";
-  }
-
-  @Override
   public boolean ignore(AnalyzedTokenReadings[] tokens, int position) {
     if (wordRepetitionOf("-", tokens, position)) {
-      return true;   
+      return true;
     }
     if (wordRepetitionOf("и", tokens, position)) {
-      return true;   
+      return true;
     }
     if (wordRepetitionOf("по", tokens, position)) {
-      return true;   
+      return true;
     }
     if (tokens[position - 1].getToken().equals("ПО") && tokens[position].getToken().equals("по")) {
         return true;   // "ПО по"
@@ -57,10 +55,14 @@ public class RussianSimpleWordRepeatRule extends WordRepeatRule {
         return true;   // "по ПО"
     }
     if (wordRepetitionOf("что", tokens, position)) {
-      return true;   
+      return true;
     }
-
-    
+    if (PATTERN.matcher(tokens[position].getToken()).matches() &&
+          position > 1 &&
+          PATTERN.matcher(tokens[position-1].getToken()).matches()) {
+      // spelling with spaces in between: "L L"
+      return true;
+    }
     return super.ignore(tokens, position);
   }
 

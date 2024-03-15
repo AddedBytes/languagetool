@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
+import io.opentelemetry.api.common.Attributes;
 import org.jetbrains.annotations.NotNull;
 import org.languagetool.JLanguageTool;
 import org.languagetool.Language;
@@ -35,6 +36,7 @@ import org.languagetool.rules.CorrectExample;
 import org.languagetool.rules.IncorrectExample;
 import org.languagetool.rules.Rule;
 import org.languagetool.rules.TextLevelRule;
+import org.languagetool.tools.TelemetryProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,31 +73,33 @@ class ApiV2 {
 
   void handleRequest(String path, HttpExchange httpExchange, Map<String, String> parameters, ErrorRequestLimiter errorRequestLimiter,
                      String remoteAddress, HTTPServerConfig config) throws Exception {
+    String spanName = "/v2/" + path;
     if (path.equals("languages")) {
-      handleLanguagesRequest(httpExchange);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleLanguagesRequest(httpExchange));
     } else if (path.equals("maxtextlength")) {
-      handleMaxTextLengthRequest(httpExchange, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleMaxTextLengthRequest(httpExchange, config));
     } else if (path.equals("configinfo")) {
-      handleGetConfigurationInfoRequest(httpExchange, parameters, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleGetConfigurationInfoRequest(httpExchange, parameters, config));
     } else if (path.equals("info")) {
-      handleSoftwareInfoRequest(httpExchange);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleSoftwareInfoRequest(httpExchange));
     } else if (path.equals("check")) {
-      handleCheckRequest(httpExchange, parameters, errorRequestLimiter, remoteAddress, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleCheckRequest(httpExchange, parameters, errorRequestLimiter, remoteAddress, config));
     } else if (path.equals("words")) {
-      handleWordsRequest(httpExchange, parameters, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleWordsRequest(httpExchange, parameters, config));
     } else if (path.equals("words/add")) {
-      handleWordAddRequest(httpExchange, parameters, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleWordAddRequest(httpExchange, parameters, config));
     } else if (path.equals("words/delete")) {
-      handleWordDeleteRequest(httpExchange, parameters, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleWordDeleteRequest(httpExchange, parameters, config));
     //} else if (path.equals("rule/examples")) {
     //  // private (i.e. undocumented) API for our own use only
     //  handleRuleExamplesRequest(httpExchange, parameters);
     } else if (path.equals("admin/refreshUser")) {
       // private (i.e. undocumented) API for our own use only
-      handleRefreshUserInfoRequest(httpExchange, parameters, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> handleRefreshUserInfoRequest(httpExchange, parameters, config));
     } else if (path.equals("users/me")) {
       // private (i.e. undocumented) API for our own use only
-      handleGetUserInfoRequest(httpExchange, config);
+      TelemetryProvider.INSTANCE.createSpan(spanName, Attributes.empty(), () -> 
+        handleGetUserInfoRequest(httpExchange, parameters, config));
     } else {
       throw new PathNotFoundException("Unsupported action: '" + path + "'. Please see " + API_DOC_URL);
     }
@@ -211,7 +215,7 @@ class ApiV2 {
     DatabaseAccess db = DatabaseAccess.getInstance();
     /*
      *  experimental batch mode for adding words,
-     *  use mode=batch, words="word1 word2 word3" (whitespace delimited list) instead of word paramater
+     *  use mode=batch, words="word1 word2 word3" (whitespace delimited list) instead of word parameter
      */
     if ("batch".equals(parameters.get("mode"))) {
       List<String> words = Arrays.asList(parameters.get("words").split("\\s+"));
@@ -321,7 +325,7 @@ class ApiV2 {
    * Provide information on user that requests this, e.g. for add-on to acquire token + other information
    * Expects user + password via HTTP Basic Auth
    */
-  private void handleGetUserInfoRequest(HttpExchange httpExchange, HTTPServerConfig config) throws Exception {
+  private void handleGetUserInfoRequest(HttpExchange httpExchange, Map<String, String> parameters, HTTPServerConfig config) throws Exception {
     if (httpExchange.getRequestMethod().equalsIgnoreCase("options")) {
       ServerTools.setAllowOrigin(httpExchange, allowOriginUrl);
       httpExchange.getResponseHeaders().put("Access-Control-Allow-Methods", Collections.singletonList("GET, OPTIONS"));
@@ -336,15 +340,38 @@ class ApiV2 {
       if (!httpExchange.getRequestHeaders().containsKey("Authorization")) {
         throw new AuthException("Expected Basic Authentication");
       }
+      String authParameter = parameters.getOrDefault("authMethod", "password");
+      if (!(authParameter.equals("password") || 
+            authParameter.equals("apiKey") || 
+            authParameter.equals("addonToken"))) {
+        throw new IllegalArgumentException("Unknown authMethod: " + authParameter);
+      }
+
       String authHeader = httpExchange.getRequestHeaders().getFirst("Authorization");
       BasicAuthentication basicAuthentication = new BasicAuthentication(authHeader);
       String user = basicAuthentication.getUser();
       String password = basicAuthentication.getPassword();
-      UserInfoEntry userInfo = DatabaseAccess.getInstance().getUserInfoWithPassword(user, password);
+      UserInfoEntry userInfo = null;
+
+      if (authParameter.equals("password")) {
+        userInfo = DatabaseAccess.getInstance().getUserInfoWithPassword(user, password);
+      } else if (authParameter.equals("addonToken")) {
+        userInfo = DatabaseAccess.getInstance().getUserInfoWithAddonToken(user, password);
+      } else if (authParameter.equals("apiKey")) {
+        userInfo = DatabaseAccess.getInstance().getUserInfoWithApiKey(user, password);
+      }
+
+      String format = parameters.getOrDefault("format", "extended");
       if (userInfo != null) {
-        StringWriter sw = new StringWriter();
-        new ObjectMapper().writeValue(sw, DatabaseAccess.getInstance().getExtendedUserInfo(user));
-        sendJson(httpExchange, sw);
+        if (format.equals("minimal")) {
+          StringWriter sw = new StringWriter();
+          new ObjectMapper().writeValue(sw, userInfo);
+          sendJson(httpExchange, sw);
+        } else {
+          StringWriter sw = new StringWriter();
+          new ObjectMapper().writeValue(sw, DatabaseAccess.getInstance().getExtendedUserInfo(user));
+          sendJson(httpExchange, sw);
+        }
       } else {
         throw new IllegalStateException("Could not fetch user information");
       }

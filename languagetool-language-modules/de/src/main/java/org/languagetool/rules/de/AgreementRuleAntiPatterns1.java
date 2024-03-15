@@ -39,6 +39,13 @@ class AgreementRuleAntiPatterns1 {
       posRegex("SUB:.*")
     ),
     asList(
+      posRegex("(ART|PRO):.*"),   // "Wie viele Kolleg/-innen haben sie?"
+      new PatternTokenBuilder().posRegex("ADJ:.*").min(0).build(),
+      posRegex("SUB:.*"),
+      token("/"),
+      tokenRegex("-in|-innen")
+    ),
+    asList(
       token("wegen"),   //  "...und hatte wegen des vielen Trinkens Kopfschmerzen." (#4695)
       token("des"),
       token("vielen"),
@@ -79,6 +86,12 @@ class AgreementRuleAntiPatterns1 {
     asList(
       token("sowas"),   // "Wir können sowas Mittwoch machen."
       tokenRegex("Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag")
+    ),
+    asList(
+      token("bei"),   // "Es kann gut sein, dass bei sowas Probleme erkannt werden."
+      token("sowas"),
+      new PatternTokenBuilder().posRegex("ADJ:.*").min(0).build(),
+      posRegex("SUB:.*PLU.*")
     ),
     asList(
       token("beides"),   // "Beides Grund genug, es mal zu probieren."
@@ -843,6 +856,60 @@ class AgreementRuleAntiPatterns1 {
       regex("des|der|den|dem|die"),
       csToken("Kommando"),
       csRegex("Spezialkräften?")
+    ),
+    asList(  
+      token("auf"),
+      csRegex("die|den|das"),
+      csToken("Verlass"),
+      csRegex("ist|war|wäre?")
+    ),
+    asList(  
+      token("auf"),
+      csRegex("die|den|das"),
+      csToken("Verlass"),
+      csToken("zu"),
+      csToken("sein")
+    ),
+    asList(  
+      // kannst du mal schauen, ob das zahlende Kunden sind?
+      token("ob"),
+      token("das"),
+      csRegex(".+e"),
+      posRegex("SUB:NOM:PLU.*"),
+      csRegex("sind|waren")
+    ),
+    asList(
+      // Er fragte, ob das Frauen auch so toll finden.
+      token("ob"),
+      token("das"),
+      token("Frauen")
+    ),
+    asList(
+      // Ich lese das Korrektur.
+      csRegex("l[ea]sen?|liest|l[ea]st?"),
+      token("das"),
+      token("Korrektur")
+    ),
+    asList(
+      // Ich habe das Korrektur gelesen.
+      csRegex("habe?n?|ha[sb]?t"),
+      token("das"),
+      token("Korrektur"),
+      token("gelesen")
+    ),
+    asList(
+      // In einer entzückend chaotischen Partie zwischen A und B kam es zum Unentschieden.
+      posRegex("ART.*"),
+      posRegex("VER:PA[12]"),
+      posRegex("ADJ.*"),
+      posRegex("SUB.*")
+    ),
+    asList(
+      // Er lässt einen Visionen haben.
+      csRegex("lässt|lassen|ließ|ließen"),
+      token("einen"),
+      posRegex("SUB:AKK.*"),
+      posRegex("VER:INF.*")
     )
   );
 

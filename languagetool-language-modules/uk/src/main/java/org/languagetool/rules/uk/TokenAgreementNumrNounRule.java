@@ -65,7 +65,7 @@ public class TokenAgreementNumrNounRule extends Rule {
   private static final Pattern _FRA = Pattern.compile(".*,[1-9]+");
   private static final Pattern _2to4 = Pattern.compile("([0-9]+[–-])?[^,]*(?<!1)[234]");
   private static final Pattern _5to9 = Pattern.compile("[0-9\\h]*([5-90]|1[2-4])");
-  private static final Pattern _5to9_ALPHA = Pattern.compile("(.+-)?(п.ять|шість|сім|вісім|(три)?дев.ять|.*дцять|сорок|.*десять?|дев.яносто|сто|двісті|триста|чотириста|півтораста|.+сот)|(де)?кілька|кількох|аніскільки");
+  private static final Pattern _5to9_ALPHA = Pattern.compile("(.+-)?(п.ять|шість|сім|вісім|(три)?дев.?ять|.*дцять|сорок|.*десять?|дев.яносто|сто|двісті|триста|чотириста|півтораста|.+сот)|(де)?кілька|кількох|аніскільки");
   private static final Pattern NOUN_FORCE_PATTERN = Pattern.compile("чоловік|солдат|тон|(нано|мікро|мілі|дека|кіло|мега|гіга|тера|пета)?(герц|байт|біт|бар|бер|ват|вольт|децибел|рентген|моль|мікрон|грам|аршин|лат|карат)");
 
   private final Synthesizer synthesizer;
@@ -373,11 +373,11 @@ public class TokenAgreementNumrNounRule extends Rule {
             masterInflections.removeAll(pVnazZna);
             masterInflections.add(new Inflection("p", "v_rod", null));
           }
-          else if( numrToken.matches("((.+-)?(двоє|двох|троє|.+еро|.+ьох))|обидвоє|обидвох|обоє|обох") ) {
+          else if( numrToken.matches("((.+-)?(двоє|двох|троє|.+еро|.+ьох))|обидвоє|обидвох|обоє|обох|двійко") ) {
             masterInflections.removeAll(pVnazZna);
             masterInflections.add(new Inflection("p", "v_rod", null));
           }
-          else if( numrToken.matches("(не)?багато|(не|чи)?мало|с[тк]ільки(-то|сь)?|.+-скільки|кілько") ) {
+          else if( numrToken.matches("(не)?багато|багато-багато|(не|чи)?мало|с[тк]ільки(-то|сь)?|.+-скільки|кілько") ) {
             masterInflections.removeAll(pVnazZna);
             masterInflections.add(new Inflection("p", "v_rod", null));
             masterInflections.add(new Inflection("m", "v_rod", null));
@@ -489,11 +489,11 @@ public class TokenAgreementNumrNounRule extends Rule {
         }
         else if( masterInflections.contains(new Inflection("m", "v_rod", null))
             && tokens[i].getToken().matches(".*[ую]")
-            && PosTagHelper.hasPosTag(nounTokenReadings, "noun.*?:m:v_dav.*") ) {
-          msg += ". Можливо, вжито невнормований родовий відмінок ч.р. з закінченням -у/-ю замість -а/-я (така тенденція є в сучасній мові)?";
+            && PosTagHelper.hasPosTag(nounTokenReadings, Pattern.compile("noun.*?:m:v_dav.*")) ) {
+          msg += CaseGovernmentHelper.USED_U_INSTEAD_OF_A_MSG;
         }
-        else if( ! PosTagHelper.hasPosTag(state.numrTokenReadings, "adj.*?v_mis.*")
-            && PosTagHelper.hasPosTag(nounTokenReadings, "noun.*?v_mis.*") ) {
+        else if( ! PosTagHelper.hasPosTag(state.numrTokenReadings, Pattern.compile("adj.*?v_mis.*"))
+            && PosTagHelper.hasPosTag(nounTokenReadings, Pattern.compile("noun.*?v_mis.*")) ) {
           msg += ". Можливо, пропущено прийменник на/в/у...?";
         }
 

@@ -43,11 +43,45 @@ public class CatalanDisambiguationRuleTest {
     tokenizer = new CatalanWordTokenizer();
     sentenceTokenizer = new SRXSentenceTokenizer(new Catalan());
     //disambiguator = new MultiWordChunker("/ca/multiwords.txt", true);
-    disambiguator = new CatalanHybridDisambiguator();
+    disambiguator = new CatalanHybridDisambiguator(new Catalan());
   }
 
   @Test
   public void testChunker() throws IOException {
+
+    TestTools
+      .myAssert(
+        "COVID-19",
+        "/[null]SENT_START COVID-19/[COVID-19]NCFS000|COVID-19/[covid-19]NCFS000",
+        tokenizer, sentenceTokenizer, tagger, disambiguator);
+
+    TestTools
+      .myAssert(
+        "New York University",
+        "/[null]SENT_START New/[New York University]NPCN000  /[null]null York/[New York University]NPCN000|York/[York]_possible_nompropi"
+          + "  /[null]null University/[New York University]NPCN000|University/[University]_possible_nompropi",
+        tokenizer, sentenceTokenizer, tagger, disambiguator);
+
+
+    TestTools
+      .myAssert(
+        "Jean-Luc Mélanchon",
+        "/[null]SENT_START Jean-Luc/[Jean-Luc Mélanchon]NPMSSP0  /[null]null Mélanchon/[Jean-Luc Mélanchon]NPMSSP0|Mélanchon/[Mélanchon]_possible_nompropi",
+        tokenizer, sentenceTokenizer, tagger, disambiguator);
+
+    TestTools
+      .myAssert(
+        "Yuval Noha Hariri",
+        "/[null]SENT_START Yuval/[Yuval]NPCN000  /[null]null Noha/[null]null  /[null]null Hariri/[null]null",
+        tokenizer, sentenceTokenizer, tagger, disambiguator);
+
+    TestTools
+      .myAssert(
+        "Yuval Noah Harari",
+        "/[null]SENT_START Yuval/[Yuval Noah Harari]NPCN000  /[null]null Noah/[Noah]_possible_nompropi|Noah/[Yuval Noah Harari]NPCN000  /[null]null Harari/[Harari]_possible_nompropi|Harari/[Yuval Noah Harari]NPCN000",
+        tokenizer, sentenceTokenizer, tagger, disambiguator);
+
+
     TestTools
     .myAssert(
         "Abans-d'ahir va ser",
@@ -116,12 +150,12 @@ public class CatalanDisambiguationRuleTest {
     TestTools
         .myAssert(
             "A costa d'ell",
-            "/[null]SENT_START A/[a costa d']LOC_PREP  /[null]null costa/[a costa d']LOC_PREP  /[null]null d'/[a costa d']LOC_PREP ell/[ell]PP3MS000",
+            "/[null]SENT_START A/[a costa d']LOC_PREP  /[null]null costa/[a costa d']LOC_PREP  /[null]null d'/[a costa d']LOC_PREP ell/[ell]PP3MSN00",
             tokenizer, sentenceTokenizer, tagger, disambiguator);
     TestTools
         .myAssert(
             "A costa d’ell",
-            "/[null]SENT_START A/[a costa d']LOC_PREP  /[null]null costa/[a costa d']LOC_PREP  /[null]null d'/[a costa d']LOC_PREP ell/[ell]PP3MS000",
+            "/[null]SENT_START A/[a costa d']LOC_PREP  /[null]null costa/[a costa d']LOC_PREP  /[null]null d'/[a costa d']LOC_PREP ell/[ell]PP3MSN00",
             tokenizer, sentenceTokenizer, tagger, disambiguator);
     TestTools
     .myAssert(

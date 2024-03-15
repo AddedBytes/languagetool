@@ -42,11 +42,12 @@ import com.sun.star.uno.XComponentContext;
  * @since 4.3
  * @author Fred Kruse, Marcin Miłkowski
  */
-class MessageHandler {
+public class MessageHandler {
   
   private static final String logLineBreak = System.lineSeparator();  //  LineBreak in Log-File (MS-Windows compatible)
   
   private static boolean isOpen = false;
+  private static boolean isInit = false;
   
   private static boolean testMode;
   
@@ -58,24 +59,27 @@ class MessageHandler {
    * Initialize log-file
    */
   private static void initLogFile(XComponentContext xContext) {
-    try (OutputStream stream = new FileOutputStream(OfficeTools.getLogFilePath(xContext));
-        OutputStreamWriter writer = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
-        BufferedWriter br = new BufferedWriter(writer)
-        ) {
-      Date date = new Date();
-      OfficeProductInfo officeInfo = OfficeTools.getOfficeProductInfo(xContext);
-      writer.write("LT office integration log from " + date + logLineBreak + logLineBreak);
-      writer.write("LanguageTool " + JLanguageTool.VERSION + " (" + JLanguageTool.BUILD_DATE + ", " 
-          + JLanguageTool.GIT_SHORT_ID + ")" + logLineBreak);
-      writer.write("OS: " + System.getProperty("os.name") + " " 
-          + System.getProperty("os.version") + " on " + System.getProperty("os.arch") + logLineBreak);
-      if (officeInfo != null) { 
-        writer.write(officeInfo.ooName + " " + officeInfo.ooVersion + officeInfo.ooExtension
-            + " (" + officeInfo.ooVendor +"), " + officeInfo.ooLocale + logLineBreak);
+    if (!isInit) {
+      isInit = true;
+      try (OutputStream stream = new FileOutputStream(OfficeTools.getLogFilePath(xContext));
+          OutputStreamWriter writer = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
+          BufferedWriter br = new BufferedWriter(writer)
+          ) {
+        Date date = new Date();
+        OfficeProductInfo officeInfo = OfficeTools.getOfficeProductInfo(xContext);
+        writer.write("LT office integration log from " + date + logLineBreak + logLineBreak);
+        writer.write("LanguageTool " + JLanguageTool.VERSION + " (" + JLanguageTool.BUILD_DATE + ", " 
+            + JLanguageTool.GIT_SHORT_ID + ")" + logLineBreak);
+        writer.write("OS: " + System.getProperty("os.name") + " " 
+            + System.getProperty("os.version") + " on " + System.getProperty("os.arch") + logLineBreak);
+        if (officeInfo != null) { 
+          writer.write(officeInfo.ooName + " " + officeInfo.ooVersion + officeInfo.ooExtension
+              + " (" + officeInfo.ooVendor +"), " + officeInfo.ooLocale + logLineBreak);
+        }
+        writer.write(OfficeTools.getJavaInformation() + logLineBreak + logLineBreak);
+      } catch (Throwable t) {
+        showError(t);
       }
-      writer.write(OfficeTools.getJavaInformation() + logLineBreak + logLineBreak);
-    } catch (Throwable t) {
-      showError(t);
     }
   }
   
@@ -89,7 +93,7 @@ class MessageHandler {
   /**
    * Show an error in a dialog
    */
-  static void showError(Throwable e) {
+  public static void showError(Throwable e) {
     printException(e);
     if (testMode) {
       throw new RuntimeException(e);
@@ -110,7 +114,7 @@ class MessageHandler {
   /**
    * Write to log-file
    */
-  static void printToLogFile(String str) {
+  public static void printToLogFile(String str) {
     try (OutputStream stream = new FileOutputStream(OfficeTools.getLogFilePath(), true);
         OutputStreamWriter writer = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
         BufferedWriter br = new BufferedWriter(writer)
@@ -124,7 +128,7 @@ class MessageHandler {
   /** 
    * Prints Exception to log-file  
    */
-  static void printException(Throwable t) {
+  public static void printException(Throwable t) {
    printToLogFile(Tools.getFullStackTrace(t));
   }
 
@@ -139,7 +143,7 @@ class MessageHandler {
    * Shows a message in a dialog box
    * @param txt message to be shown
    */
-  static void showMessage(String txt) {
+  public static void showMessage(String txt) {
     showMessage(txt, true);
   }
 
@@ -149,6 +153,14 @@ class MessageHandler {
     }
     DialogThread dt = new DialogThread(txt, false);
     dt.run();
+  }
+  
+  public static void showFullStackMessage (String msg) {
+    try {
+      throw new RuntimeException(msg);
+    } catch (Throwable t) {
+      showError(t);
+    }
   }
 
   /**

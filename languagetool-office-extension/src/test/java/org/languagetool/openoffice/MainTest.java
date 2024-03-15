@@ -23,6 +23,7 @@ import com.sun.star.beans.PropertyValue;
 import com.sun.star.lang.Locale;
 import com.sun.star.linguistic2.ProofreadingResult;
 import org.junit.Test;
+import org.languagetool.openoffice.OfficeTools.LoErrorType;
 import org.languagetool.rules.Rule;
 
 import static org.junit.Assert.assertEquals;
@@ -50,15 +51,25 @@ public class MainTest {
     textPara = "This is a test with one footnote1. And a Zero Space at the end of the second sentence.";
     flatPara = "This is a test with one footnote​. And a Zero Space at the end of the second sentence​.";
     assertTrue(DocumentCache.isEqualText(flatPara, textPara, footnotes));
-    textPara = "This is a test with two footnotes14. Here is the secondXIII.";
-    flatPara = "This is a test with two footnotes​. Here is the second​.";
     footnotes = new int[2];
     footnotes[0] = 33;
     footnotes[1] = 54;
+    textPara = "This is a test with two footnotes14. Here is the secondXIII.";
+    flatPara = "This is a test with two footnotes​. Here is the second​.";
     assertTrue(DocumentCache.isEqualText(flatPara, textPara, footnotes));
     textPara = "This is a test with two footnotes14. Here is the secondXIII.";
     flatPara = "This is a test with two footnotes​. Here is no second.";
     assertTrue(!DocumentCache.isEqualText(flatPara, textPara, footnotes));
+    footnotes[0] = 33;
+    footnotes[1] = 54;
+    textPara = "This is a test with two footnotes14. Here is the second [17] with full Roman numerals in text paragraph.";
+    flatPara = "This is a test with two footnotes​. Here is the second ​[17] with full Roman numerals in text paragraph.";
+    assertTrue(DocumentCache.isEqualText(flatPara, textPara, footnotes));
+    footnotes[0] = 34;
+    footnotes[1] = 59;
+    textPara = "This is a test with two footnotes [14]. Here is the second1 with full Roman numerals in text paragraph.";
+    flatPara = "This is a test with two footnotes ​[14]. Here is the second​ with full Roman numerals in text paragraph.";
+    assertTrue(DocumentCache.isEqualText(flatPara, textPara, footnotes));
   }
 
   @Test
@@ -128,7 +139,7 @@ public class MainTest {
     ProofreadingResult paRes = prog.doProofreading("1", paragraphs.get(0), locale, 0, paragraphs.get(0).length(), propertyValues);
     assertEquals("1", paRes.aDocumentIdentifier);
     assertEquals(2, paRes.aErrors.length);  // This may be critical if rules changed
-    assertTrue(paRes.aErrors[0].aRuleIdentifier.equals("UNPAIRED_BRACKETS"));
+    assertTrue(paRes.aErrors[0].aRuleIdentifier.equals("DE_UNPAIRED_QUOTES"));
     assertTrue(paRes.aErrors[1].aRuleIdentifier.equals("DE_AGREEMENT"));
     MultiDocumentsHandler documents = prog.getMultiDocumentsHandler();
     SingleDocument document = documents.getDocuments().get(0);
@@ -137,24 +148,25 @@ public class MainTest {
     // test rules are:
     // DE_AGREEMENT - test of rule on sentence level
     // WHITESPACE_RULE - test of rule on level of single paragraph
-    // ENGLISH_WORD_REPEAT_BEGINNING_RULE - test of rule on level of three paragraphs
-    // EN_UNPAIRED_BRACKETS - test of rule on level of chapter / full text
-    // EN_QUOTES - negative test of rule on level of chapter / full text
+    // GERMAN_WORD_REPEAT_BEGINNING_RULE - test of rule on level of three paragraphs
+    // UNPAIRED_BRACKETS - test of rule on level of chapter / full text
+    // DE_UNPAIRED_QUOTES - test of rule on level of chapter / full text
     Set<String> enabledRules = new HashSet<>();
     for (Rule rule : lt.getAllActiveOfficeRules()) {
       if (!rule.getId().equals("DE_AGREEMENT") && !rule.getId().equals("WHITESPACE_RULE")
-          && !rule.getId().equals("UNPAIRED_BRACKETS") && !rule.getId().equals("GERMAN_WORD_REPEAT_BEGINNING_RULE")) {
+          && !rule.getId().equals("UNPAIRED_BRACKETS") && !rule.getId().equals("DE_UNPAIRED_QUOTES") 
+          && !rule.getId().equals("GERMAN_WORD_REPEAT_BEGINNING_RULE")) {
         lt.disableRule(rule.getId());
       } else {
         enabledRules.add(rule.getId());
       }
     }
-    assertEquals(4, enabledRules.size()); // test if all needed 4 rules are enabled 
+    assertEquals(5, enabledRules.size()); // test if all needed 5 rules are enabled 
     enabledRules.clear();
     for (Rule rule : lt.getAllActiveOfficeRules()) {
       enabledRules.add(rule.getId());
     }
-    assertEquals(4, enabledRules.size()); // test if not more than needed rules are enabled
+    assertEquals(5, enabledRules.size()); // test if not more than needed rules are enabled
     // set document cache of virtual document
     // NOTE: this step has to be done, when all other preparations are done
     document.setDocumentCacheForTests(paragraphs, textParagraphs, footnotes, chapterBegins, locale);
@@ -162,7 +174,7 @@ public class MainTest {
       paRes.nStartOfSentencePosition = 0;
       paRes.nBehindEndOfSentencePosition = paragraphs.get(i).length();
       paRes.nStartOfNextSentencePosition = paRes.nBehindEndOfSentencePosition;
-      paRes = document.getCheckResults(paragraphs.get(i), locale, paRes, propertyValues, false, lt, i);
+      paRes = document.getCheckResults(paragraphs.get(i), locale, paRes, propertyValues, false, lt, i, LoErrorType.GRAMMAR);
       if (i == 0) {
         assertEquals(1, paRes.aErrors.length);
         assertTrue(paRes.aErrors[0].aRuleIdentifier.equals("DE_AGREEMENT"));
@@ -284,7 +296,7 @@ public class MainTest {
     ProofreadingResult paRes = prog.doProofreading("1", paragraphs.get(0), locale, 0, paragraphs.get(0).length(), propertyValues);
     assertEquals("1", paRes.aDocumentIdentifier);
     assertEquals(2, paRes.aErrors.length);  // This may be critical if rules changed
-    assertTrue(paRes.aErrors[0].aRuleIdentifier.equals("UNPAIRED_BRACKETS"));
+    assertTrue(paRes.aErrors[0].aRuleIdentifier.equals("DE_UNPAIRED_QUOTES"));
     assertTrue(paRes.aErrors[1].aRuleIdentifier.equals("DE_AGREEMENT"));
     MultiDocumentsHandler documents = prog.getMultiDocumentsHandler();
     SingleDocument document = documents.getDocuments().get(0);
@@ -293,24 +305,25 @@ public class MainTest {
     // test rules are:
     // DE_AGREEMENT - test of rule on sentence level
     // WHITESPACE_RULE - test of rule on level of single paragraph
-    // ENGLISH_WORD_REPEAT_BEGINNING_RULE - test of rule on level of three paragraphs
-    // EN_UNPAIRED_BRACKETS - test of rule on level of chapter / full text
-    // EN_QUOTES - negative test of rule on level of chapter / full text
+    // GERMAN_WORD_REPEAT_BEGINNING_RULE - test of rule on level of three paragraphs
+    // DE_UNPAIRED_QUOTES - test of rule on level of chapter / full text
+    // UNPAIRED_BRACKETS - test of rule on level of chapter / full text
     Set<String> enabledRules = new HashSet<>();
     for (Rule rule : lt.getAllActiveOfficeRules()) {
       if (!rule.getId().equals("DE_AGREEMENT") && !rule.getId().equals("WHITESPACE_RULE")
-          && !rule.getId().equals("UNPAIRED_BRACKETS") && !rule.getId().equals("GERMAN_WORD_REPEAT_BEGINNING_RULE")) {
+          && !rule.getId().equals("DE_UNPAIRED_QUOTES") && !rule.getId().equals("UNPAIRED_BRACKETS") 
+          && !rule.getId().equals("GERMAN_WORD_REPEAT_BEGINNING_RULE")) {
         lt.disableRule(rule.getId());
       } else {
         enabledRules.add(rule.getId());
       }
     }
-    assertEquals(4, enabledRules.size()); // test if all needed 4 rules are enabled 
+    assertEquals(5, enabledRules.size()); // test if all needed 5 rules are enabled 
     enabledRules.clear();
     for (Rule rule : lt.getAllActiveOfficeRules()) {
       enabledRules.add(rule.getId());
     }
-    assertEquals(4, enabledRules.size()); // test if not more than needed rules are enabled
+    assertEquals(5, enabledRules.size()); // test if not more than needed rules are enabled
     int textParagraphsSize = 0;
     for (int i = 0; i < DocumentCache.NUMBER_CURSOR_TYPES; i++) {
       textParagraphsSize += textParagraphs.get(i).size();
@@ -324,7 +337,7 @@ public class MainTest {
       paRes.nBehindEndOfSentencePosition = paragraphs.get(i).length();
       paRes.nStartOfNextSentencePosition = paRes.nBehindEndOfSentencePosition;
       propertyValues[0] = new PropertyValue("FootnotePositions", -1, footnotes.get(i), PropertyState.DIRECT_VALUE);
-      paRes = document.getCheckResults(paragraphs.get(i), locale, paRes, propertyValues, false, lt, i);
+      paRes = document.getCheckResults(paragraphs.get(i), locale, paRes, propertyValues, false, lt, i, LoErrorType.GRAMMAR);
       if (i == 0) {
         assertEquals(1, paRes.aErrors.length);
         assertTrue(paRes.aErrors[0].aRuleIdentifier.equals("DE_AGREEMENT"));

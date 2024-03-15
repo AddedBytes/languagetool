@@ -221,6 +221,9 @@ public class MatchState {
       Pattern pRegexMatch = match.getRegexMatch();
       String regexReplace = match.getRegexReplace();
       if (pRegexMatch != null) {
+        if (lang != null && lang.getShortCode().equals("ar")) {
+           formattedString[0] = StringTools.removeTashkeel(formattedString[0]);
+        }
         formattedString[0] = pRegexMatch.matcher(formattedString[0]).replaceAll(regexReplace);
       }
 
@@ -322,33 +325,31 @@ public class MatchState {
    */
   // FIXME: gets only the first POS tag that matches, this can be wrong
   // on the other hand, many POS tags = too many suggestions?
+  // POS tags can be chosen by the synthesizer of each language: synthesizer.getTargetPosTag()
   public final String getTargetPosTag() {
     String targetPosTag = match.getPosTag();
     List<String> posTags = new ArrayList<>();
     Pattern pPosRegexMatch = match.getPosRegexMatch();
     String posTagReplace = match.getPosTagReplace();
-
     if (match.isStaticLemma()) {
       for (AnalyzedToken analyzedToken : matchedToken) {
         String tst = analyzedToken.getPOSTag();
         if (tst != null && pPosRegexMatch.matcher(tst).matches()) {
-          targetPosTag = analyzedToken.getPOSTag();
-          posTags.add(targetPosTag);
+          posTags.add(tst);
         }
       }
-      
+      targetPosTag = synthesizer.getTargetPosTag(posTags, targetPosTag);
       if (pPosRegexMatch != null && posTagReplace != null && !posTags.isEmpty()) {
-        targetPosTag = pPosRegexMatch.matcher(targetPosTag).replaceAll(
-            posTagReplace);
+        targetPosTag = pPosRegexMatch.matcher(targetPosTag).replaceAll(posTagReplace);
       }
     } else {
       for (AnalyzedToken analyzedToken : formattedToken) {
         String tst = analyzedToken.getPOSTag();
         if (tst != null && pPosRegexMatch.matcher(tst).matches()) {
-          targetPosTag = analyzedToken.getPOSTag();
-          posTags.add(targetPosTag);
+          posTags.add(tst);
         }
       }
+      targetPosTag = synthesizer.getTargetPosTag(posTags, targetPosTag);
       if (pPosRegexMatch != null && posTagReplace != null) {
         if (posTags.isEmpty()) {
           posTags.add(targetPosTag);

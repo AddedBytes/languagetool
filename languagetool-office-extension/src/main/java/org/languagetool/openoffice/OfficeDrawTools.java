@@ -144,6 +144,9 @@ public class OfficeDrawTools {
    */
   public static boolean isImpressDocument(XComponent xComponent) {
     XServiceInfo xInfo = UnoRuntime.queryInterface(XServiceInfo.class, xComponent);
+    if (xInfo == null) {
+      return false;
+    }
     return xInfo.supportsService("com.sun.star.presentation.PresentationDocument");
   }
 
@@ -569,9 +572,11 @@ public class OfficeDrawTools {
             XShape xShape = UnoRuntime.queryInterface(XShape.class, oShape);
             if (xShape != null) {
               XText xText = UnoRuntime.queryInterface(XText.class, xShape);
-              XTextCursor xTextCursor = xText.createTextCursor();
-              XPropertySet xParaPropSet = UnoRuntime.queryInterface(XPropertySet.class, xTextCursor);
-              return ((Locale) xParaPropSet.getPropertyValue("CharLocale"));
+              if (xText != null) {
+                XTextCursor xTextCursor = xText.createTextCursor();
+                XPropertySet xParaPropSet = UnoRuntime.queryInterface(XPropertySet.class, xTextCursor);
+                return ((Locale) xParaPropSet.getPropertyValue("CharLocale"));
+              }
             } else {
               MessageHandler.printToLogFile("OfficeDrawTools: getDocumentLocale: xShape " + j + " is null");
             }

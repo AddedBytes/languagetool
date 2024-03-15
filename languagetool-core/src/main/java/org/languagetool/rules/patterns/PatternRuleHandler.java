@@ -19,19 +19,26 @@
 package org.languagetool.rules.patterns;
 
 import org.apache.commons.lang3.ObjectUtils;
-import org.languagetool.Languages;
-import org.languagetool.ResourceBundleTools;
+import org.languagetool.*;
+import org.languagetool.broker.ResourceDataBroker;
 import org.languagetool.rules.*;
 import org.languagetool.tagging.disambiguation.rules.DisambiguationPatternRule;
 import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Pattern;
 
 public class PatternRuleHandler extends XMLRuleHandler {
+
+  @Override
+  public InputSource resolveEntity(String publicId, String systemId) throws IOException, SAXException {
+    return new RuleEntityResolver().resolveEntity(publicId, systemId);
+  }
 
   public static final String TYPE = "type";
 
@@ -53,10 +60,6 @@ public class PatternRuleHandler extends XMLRuleHandler {
 
   private final List<DisambiguationPatternRule> rulegroupAntiPatterns = new ArrayList<>();
   private final List<DisambiguationPatternRule> ruleAntiPatterns = new ArrayList<>();
-  private final List<String> categoryTags = new ArrayList<>();
-  private final List<String> ruleGroupTags = new ArrayList<>();
-  private final List<String> ruleTags = new ArrayList<>();
-
   private int subId;
   private boolean interpretPosTagsPreDisambiguation;
 
@@ -94,6 +97,12 @@ public class PatternRuleHandler extends XMLRuleHandler {
   public PatternRuleHandler(String sourceFile) {
     this.sourceFile = sourceFile;
   }
+  public PatternRuleHandler(String filename, Language lang) {
+    this.sourceFile = filename;
+    if (lang != null) {
+      this.language = Languages.getLanguageForShortCode(lang.getShortCodeWithCountryAndVariant());  
+    }
+  }
 
   /**
    * If set to true, don't throw an exception if id or name is not set.
@@ -127,12 +136,18 @@ public class PatternRuleHandler extends XMLRuleHandler {
         if (attrs.getValue("tags") != null) {
           categoryTags.addAll(Arrays.asList(attrs.getValue("tags").split(" ")));
         }
+        if (attrs.getValue("tone_tags") != null) {
+          categoryToneTags.addAll(Arrays.asList(attrs.getValue("tone_tags").split(" ")));
+        }
+        isGoalSpecificCategoryAttribute = attrs.getValue(GOAL_SPECIFIC);
         break;
       case "rules":
         String languageStr = attrs.getValue("lang");
         premiumFileAttribute = attrs.getValue(PREMIUM); //check if all rules should be premium by default in this file
         idPrefix = attrs.getValue("idprefix");
-        language = Languages.getLanguageForShortCode(languageStr);
+        if (language == null) {
+          language = Languages.getLanguageForShortCode(languageStr);
+        }
         messages = ResourceBundleTools.getMessageBundle(language);
         break;
       case "regexp":
@@ -214,10 +229,10 @@ public class PatternRuleHandler extends XMLRuleHandler {
         }
         id = idPrefix != null ? idPrefix + id : id;
         if (inRuleGroup && ruleGroupDefaultOff && attrs.getValue(DEFAULT) != null) {
-          throw new RuntimeException("Rule group " + ruleGroupId + " is off by default, thus rule " + id + " cannot specify 'default=...'");
+          throw new RuntimeException("Rule group " + ruleGroupId + " is off by default, thus a subrule of " + id + " cannot specify 'default=...'. \033[1m Remove 'default=...' from rule group or subrule level in " + ruleGroupId + "!\033[0m");
         }
         if (inRuleGroup && ruleGroupDefaultTempOff && attrs.getValue(DEFAULT) != null) {
-          throw new RuntimeException("Rule group " + ruleGroupId + " is off by default, thus rule " + id + " cannot specify 'default=...'");
+          throw new RuntimeException("Rule group " + ruleGroupId + " is off by default, thus a subrule of " + id + " cannot specify 'default=...'. \033[1m Remove 'default=...' from rule group or subrule level in " + ruleGroupId + "!\033[0m");
         }
         if (inRuleGroup && ruleGroupDefaultOff) {
           defaultOff = true;
@@ -239,6 +254,32 @@ public class PatternRuleHandler extends XMLRuleHandler {
         isRuleSuppressMisspelled = false;
         if (attrs.getValue("tags") != null) {
           ruleTags.addAll(Arrays.asList(attrs.getValue("tags").split(" ")));
+        }
+        if (attrs.getValue("tone_tags") != null) {
+          ruleToneTags.addAll(Arrays.asList(attrs.getValue("tone_tags").split(" ")));
+        }
+        String isGoalSpecificRule = attrs.getValue(GOAL_SPECIFIC);
+        //check if this rule is goal specific
+        if (isGoalSpecificRule != null) {
+          if (TRUE.equals(isGoalSpecificRule)) {
+            isGoalSpecific = true;
+          } else if (FALSE.equals(isGoalSpecificRule)) {
+            isGoalSpecific = false;
+          }
+        } else if (isGoalSpecificRuleGroupAttribute != null) {
+          if (TRUE.equals(isGoalSpecificRuleGroupAttribute)) {
+            isGoalSpecific = true;
+          } else if (FALSE.equals(isGoalSpecificRuleGroupAttribute)) {
+            isGoalSpecific = false;
+          }
+        } else if (isGoalSpecificCategoryAttribute != null) {
+          if (TRUE.equals(isGoalSpecificCategoryAttribute)) {
+            isGoalSpecific = true;
+          } else if (FALSE.equals(isGoalSpecificCategoryAttribute)) {
+            isGoalSpecific = false;
+          }
+        } else {
+          isGoalSpecific = false;
         }
         break;
       case PATTERN:
@@ -371,6 +412,10 @@ public class PatternRuleHandler extends XMLRuleHandler {
         if (attrs.getValue("tags") != null) {
           ruleGroupTags.addAll(Arrays.asList(attrs.getValue("tags").split(" ")));
         }
+        if (attrs.getValue("tone_tags") != null) {
+          ruleGroupToneTags.addAll(Arrays.asList(attrs.getValue("tone_tags").split(" ")));
+        }
+        isGoalSpecificRuleGroupAttribute = attrs.getValue(GOAL_SPECIFIC);
         String minPrevMatchesStr2 = attrs.getValue(MINPREVMATCHES);
         if (minPrevMatchesStr2 != null) {
           ruleGroupMinPrevMatches = Integer.parseInt(minPrevMatchesStr2);  
@@ -432,6 +477,10 @@ public class PatternRuleHandler extends XMLRuleHandler {
       case "category":
         categoryIssueType = null;
         categoryTags.clear();
+        categoryToneTags.clear();
+        isGoalSpecific = false;
+        premiumCategoryAttribute = null;
+        isGoalSpecificCategoryAttribute = null;
         break;
       case "regexp":
         inRegex = false;
@@ -474,6 +523,9 @@ public class PatternRuleHandler extends XMLRuleHandler {
         minPrevMatches = 0;
         distanceTokens = 0;
         ruleTags.clear();
+        ruleToneTags.clear();
+        isPremiumRule = false;
+        isGoalSpecific = false;
         break;
       case EXCEPTION:
         finalizeExceptions();
@@ -619,6 +671,9 @@ public class PatternRuleHandler extends XMLRuleHandler {
         ruleGroupMinPrevMatches = 0;
         ruleGroupDistanceTokens = 0;
         ruleGroupTags.clear();
+        ruleGroupToneTags.clear();
+        premiumRuleGroupAttribute = null;
+        isGoalSpecificRuleGroupAttribute = null;
         antipatternForRuleGroupsExamples.clear();
         break;
       case MARKER:
@@ -700,8 +755,9 @@ public class PatternRuleHandler extends XMLRuleHandler {
         rule.addTags(ruleTags);
         rule.addTags(ruleGroupTags);
         rule.addTags(categoryTags);
+        rule.addToneTags(ruleToneTags);
+        rule.addToneTags(ruleGroupToneTags);
         rule.setSourceFile(sourceFile);
-        rule.setPremium(isPremiumRule);
         rule.setMinPrevMatches(minPrevMatches);
         rule.setDistanceTokens(distanceTokens);
         rule.setXmlLineNumber(xmlLineNumber);
@@ -718,7 +774,7 @@ public class PatternRuleHandler extends XMLRuleHandler {
         rule = new RegexPatternRule(id, name, message.toString(), shortMessage, suggestionsOutMsg.toString(), language, Pattern.compile(regexStr, flags), regexpMark);
         rule.setSourceFile(sourceFile);
       } else {
-        throw new IllegalStateException("Neither '<pattern>' tokens nor '<regex>' is set in rule '" + id + "'");
+        throw new IllegalStateException("Neither '<pattern>' tokens nor '<regexp>' is set in rule '" + id + "'");
       }
       setRuleFilter(filterClassName, filterArgs, rule);
       prepareRule(rule);
@@ -771,6 +827,7 @@ public class PatternRuleHandler extends XMLRuleHandler {
   }
 
   protected void prepareRule(AbstractPatternRule rule) {
+    rule.setPremium(isPremiumRule);
     rule.setSourceFile(sourceFile);
     if (startPos != -1 && endPos != -1) {
       rule.setStartPositionCorrection(startPos);
@@ -802,6 +859,10 @@ public class PatternRuleHandler extends XMLRuleHandler {
     rule.addTags(ruleTags);
     rule.addTags(ruleGroupTags);
     rule.addTags(categoryTags);
+    rule.addToneTags(ruleToneTags);
+    rule.addToneTags(ruleGroupToneTags);
+    rule.addToneTags(categoryToneTags);
+    rule.setGoalSpecific(isGoalSpecific);
     if (inRuleGroup) {
       rule.setSubId(internString(Integer.toString(subId)));
     } else {

@@ -516,6 +516,7 @@ double-headed*
 double-jointed*
 double-parked*
 double-sided*
+dual-sided*
 Douglas-Home*
 down-hearted*
 drink-driving*
@@ -1390,7 +1391,7 @@ right-handed*
 right-hander*
 right-handers*
 right-minded*
-right-thinking*
+#right-thinking*
 right-winger*
 right-wingers*
 ring-pull*
@@ -1418,7 +1419,6 @@ run-of-the-mill*
 run-outs*
 run-ups*
 sabre-toothed*
-sailing-vessel*
 Saint-Denis*
 salt-cat*
 sang-froid*
@@ -3099,6 +3099,7 @@ wool-gathering
 wrong-footed
 wrong-headed
 bi-sexual?
+bi-sexually?
 homo-sexual?
 homo-sexually?
 homo-sexuality?
@@ -4127,7 +4128,7 @@ thermo-chemical?
 thermo-chemistry?
 false-hood?
 false-hoods?
-A-Team*
+#A-Team*
 pre-emptive$ # changed ? -> $
 pre-emptively$ # changed ? -> $
 # now-a-days? # already caught by NOW_A_DAYS
@@ -4202,8 +4203,8 @@ un-twisting?
 pre-assessment$ # changed ? -> $
 zig-zag?
 zig-zags?
-pro-tip*
-pro-tips*
+#pro-tip*
+#pro-tips*
 anti-choicer$
 pre-cautional$ # changed ? -> $
 pre-caution$ # changed ? -> $
@@ -5398,8 +5399,8 @@ egg-plant?
 egg-plants?
 elder-berry?
 elder-berries?
-bumble-bee?
-bumble-bees?
+#bumble-bee?
+#bumble-bees?
 sun-flower?
 sun-flowers?
 snake-bird?
@@ -5932,10 +5933,10 @@ blob-fish?
 blob-fishes?
 wood-chuck?
 wood-chucks?
-re-look$ # changed ? -> $
-re-looks$ # changed ? -> $
-re-looked$ # changed ? -> $
-re-looking$ # changed ? -> $
+#re-look$ # changed ? -> $
+#re-looks$ # changed ? -> $
+#re-looked$ # changed ? -> $
+#re-looking$ # changed ? -> $
 cross-bar?
 cross-bars?
 cross-origin*
@@ -5975,7 +5976,7 @@ self-hosts*
 self-hosted*
 self-hosting*
 multi-mode?
-multi-module?
+multi-module$
 sand-pit?
 sand-pits?
 high-fived*
@@ -6199,10 +6200,10 @@ blind-folding?
 blind-folded?
 mid-priced*
 bi-directional?
-re-try$ # changed ? -> $
-re-tries$ # changed ? -> $
-re-tried$ # changed ? -> $
-re-trying$ # changed ? -> $
+#re-try$ # changed ? -> $
+#re-tries$ # changed ? -> $
+#re-tried$ # changed ? -> $
+#re-trying$ # changed ? -> $
 weather-proof?
 slaughter-house?
 slaughter-houses?
@@ -6306,7 +6307,6 @@ co-founders$
 Co-Founders$
 co-founding$
 Idar-Oberstein*
-Frankfurt-Hahn*
 Frankfurt-Hahn*
 industrial-sized*
 war-fare?
@@ -7475,7 +7475,7 @@ mid-Atlantic*
 agri-food*
 anti-Mexican*
 anti-Mexicans*
-thank-yous*
+#thank-yous*
 anti-union$
 pre-taxation$ # changed ? -> $
 pre-eminence$
@@ -7610,10 +7610,10 @@ micro-calcification?
 pseudo-code?
 pseudo-codes?
 privacy-sensitive*
-rainbow-coloured*
-rainbow-colored*
-cream-colored*
-cream-coloured*
+#rainbow-coloured*
+#rainbow-colored*
+#cream-colored*
+#cream-coloured*
 work-mindedness*
 wide-mouthed*
 simple-hearted*
@@ -8717,8 +8717,8 @@ high-brows?
 water-skied*
 water-skiing*
 Magny-Cours*
-buzz-word?
-buzz-words?
+#buzz-word?
+#buzz-words?
 high-ceilinged*
 Anglo-Israelism*
 Anglo-Israelisms*
@@ -8894,3 +8894,154 @@ stone-mason?
 stone-masons?
 stone-masonry
 sense-less?
+in-stead?
+terra-cotta*
+Anglo-Saxonism*
+Anglo-Saxonisms*
+Maxi-Cosi*
+ten-percenter*
+ten-percenters*
+one-percenter*
+one-percenters*
+hundred-percenter*
+hundred-percenters*
+one-hundred-percenter*
+one-hundred-percenters*
+five-percenter*
+five-percenters*
+Dunning-Kruger*
+pro-climate*
+cash-in-lieu*
+tech-heavy*
+pok-a-tok*
+doo-wop*
+doo-wops*
+aqua-culture?
+sub-sample?
+sub-samples?
+sub-sampled?
+sub-sampling?
+risk-wary*
+comma-delimited*
+wind-storm?
+wind-storms?
+doom-scrolling*
+Duo-Lingo?
+super-intelligent$
+leaf-cutter*
+leaf-cutters*
+razzle-dazzle*
+razzle-dazzles*
+Laurier-Greenway*
+kettle-bell?
+kettle-bells?
+concert-goer$
+concert-goers$
+Pimpri-Chinchwad*
+ultra-slim?
+earth-mover?
+earth-movers?
+neo-colonial?
+neo-colonialist?
+neo-colonialists?
+neo-colonialism?
+Franche-Comté*
+Fournet-Blancheroche*
+Colgate-Palmolive*
+Kimberly-Clark*
+cross-disciplinary*
+non-linearity$
+non-linearities$
+beta-exotoxin*
+beta-exotoxins*
+beta-endorphin*
+beta-endorphins*
+bi-lingual?
+bi-lingually?
+Freeport-McMoRan*
+Williams-Sonoma*
+jiu-jitsu$
+ju-jitsu$
+fixer-upper*
+fixer-uppers*
+Chandrayaan-3*
+smart-alecky*
+risk-averse*
+Embry-Riddle*
+corner-stone?
+corner-stones?
+soy-bean?
+soy-beans?
+ultra-nationalist?
+ultra-nationalists?
+Mette-Marit*
+nothing-burger?
+nothing-burgers?
+bric-a-brac*
+fleur-de-lis*
+heebie-jeebies*
+intra-aortic*
+hypothetico-deductive*
+logico-deductive*
+ortho-xylene*
+ortho-xylenes*
+grumpety-grump*
+grumpety-grumps*
+bumpety-bump*
+bumpety-bumps*
+warm-bloodedness*
+warm-bloodednesses*
+beta-lactamase*
+beta-lactamases*
+beta-lactam*
+beta-lactams*
+Carpatho-Ukraine*
+red-tapism*
+red-tapisms*
+red-tapeism*
+red-tapeisms*
+Lennox-Gastaut*
+Rostock-Laage*
+sharp-shooter?
+sharp-shooters?
+Castrop-Rauxel*
+doo-rag*
+doo-rags*
+flood-gate?
+flood-gates?
+uncared-for*
+smack-dab*
+limp-wristed*
+lickety-split*
+hurdy-gurdy*
+hurdy-gurdies*
+honky-tonk*
+honky-tonks*
+helter-skelter*
+helter-skelters*
+fuddy-duddy*
+fuddy-duddies*
+cock-a-doodle-doo*
+cock-a-doodle-doos*
+Saxe-Lauenburg*
+Saint-Sulpice*
+dinky-di*
+off-piste*
+anarcho-syndicalism*
+anarcho-syndicalist*
+anarcho-syndicalists*
+anarcho-capitalism*
+anarcho-capitalist*
+anarcho-capitalists*
+bald-headed*
+brides-maid?
+cross-pollinate*
+cross-pollinated*
+cross-pollinates*
+cross-pollinating*
+cross-pollination*
+Beaux-Arts*
+holo-deck?
+holo-decks?
+gang-banger?
+gang-bangers?

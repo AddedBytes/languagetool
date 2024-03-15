@@ -31,10 +31,13 @@ import static junit.framework.TestCase.fail;
 public class WordListValidatorTest {
 
   private static final String VALID_CHARS =
-          "[ 0-9a-zA-ZöäüÖÄÜßëçèéáàóòÈÉÁÀÓÒÍãñíîŞş&*_:\\\\" +
+          "[ 0-9a-zA-ZöäüÖÄÜßëçèéáàóòŁÈÉÁÀÓÒÍãñíîŞş&*_:\\\\" +
           "___INSERT___" +
-          "Œ€ūαΑβΒγɣΓδΔεΕζΖηΗθΘιΙκΚλΛμΜνΝξΞοΟπΠρΡσΣτΤυΥφΦχΧψΨωΩάΆέΈίΊήΉύΎϊϋΰΐœţłń" +
-          "ŚśōżúïÎôêâû" +
+          "Œ€ūαΑβΒγɣΓδΔεΕζΖηΗθΘιΙκΚλΛμΜνΝξΞοΟπΠρΡσΣτΤυΥφΦχΧψΨωΩάΆέΈίΊήΉύΎϊϋΰΐœţłńÿ" +
+          "ČŚśŌōżúïÎôêâû" +
+          "ÇÃÕÚÊÂÔ" +
+          "ă" +
+          "å" +
           "'’" +
           "./%-]+" +
           "|[khmcdµ]?m[²³]|°[CFR]|C?O₂-?.*|mc²";
@@ -42,10 +45,13 @@ public class WordListValidatorTest {
   // Words that are valid but with special characters so that we don't want to
   // allow them in general:
   private static final Set<String> VALID_WORDS = new HashSet<>(Arrays.asList(
+          "Şanlıurfa",
+          "Žižek",
           "Háček",
           "Varaždin/S",
           "Będzin",
           "Aydın",
+          "Pavlović",
           "Poreč",
           "Čeferin",
           "Čeferin/S",
@@ -55,6 +61,9 @@ public class WordListValidatorTest {
           "Modrić/S",
           "Miłosz",
           "Arnautović/S",
+          "Dàoxuān",
+          "Sigara böreği",
+          "Sigara böreği/S",
           "Bhagavad-gītā",
           "Sønderjylland/S",
           "Utøya/S",
@@ -87,6 +96,7 @@ public class WordListValidatorTest {
           "Hyndluljóð",
           "Kazanlǎk",
           "Kesäranta",
+          "Krišjānis",
           "Kŭrdzhali",
           "Malko Tŭrnovo",
           "Rígsþula",
@@ -148,6 +158,10 @@ public class WordListValidatorTest {
           "Gündoğan",
           "Tuğrul",
           "Kīlauea",
+          "Māori",
+          "Chișinău",
+          "Chișinău/S",
+          "Křetínský/S",
           "Terzić",
           "Jūjutsu/S",
           "Ñuñoa",
@@ -156,21 +170,27 @@ public class WordListValidatorTest {
           "Børge/S",
           "Bjørn Gulden/S",
           "Snæfellsjökull/S",
+          "Višegrad/S",
           "Clément/S",
           "Snæfellsjökull",
+          "Grudziądz",
           "Skåneland",
           "Øresund",
+          "Jokić",
           "Ibišević",
           "Fríður",
           "Łódź",
           "Ørsted",
           "Samsø/S",
+          "Kılıçdaroğlu/S",
+          "Vlahović/S",
           "Sønderborg/S",
           "Sønderborg",
           "Mirotić",
           "Subotić",
           "Pÿur",
           "Subašić",
+          "Wałęsa",
           "celebrytę", // for PL
           "antybiotykoterapię", // for PL
           "elektromobilność", // for PL

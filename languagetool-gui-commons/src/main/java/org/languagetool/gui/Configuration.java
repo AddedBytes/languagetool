@@ -72,8 +72,11 @@ public class Configuration {
   static final boolean DEFAULT_USE_OTHER_SERVER = false;
   static final boolean DEFAULT_IS_PREMIUM = false;
   static final boolean DEFAULT_MARK_SINGLE_CHAR_BOLD = false;
-  static final boolean DEFAULT_USE_LT_DICTIONARY = true;
+  static final boolean DEFAULT_USE_LT_SPELL_CHECKER = true;
   static final boolean DEFAULT_NO_SYNONYMS_AS_SUGGESTIONS = false;
+  static final boolean DEFAULT_INCLUDE_TRACKED_CHANGES = false;
+  static final boolean DEFAULT_ENABLE_TMP_OFF_RULES = false;
+  static final boolean DEFAULT_ENABLE_GOAL_SPECIFIC_RULES = false;
   static final boolean DEFAULT_SAVE_LO_CACHE = true;
 
   static final Color STYLE_COLOR = new Color(0, 175, 0);
@@ -124,8 +127,11 @@ public class Configuration {
   private static final String IS_PREMIUM_KEY = "isPremium";
   private static final String MARK_SINGLE_CHAR_BOLD_KEY = "markSingleCharBold";
   private static final String LOG_LEVEL_KEY = "logLevel";
-  private static final String USE_LT_DICTIONARY_KEY = "UseLtDictionary";
+  private static final String USE_LT_SPELL_CHECKER_KEY = "UseLtSpellChecker";
   private static final String NO_SYNONYMS_AS_SUGGESTIONS_KEY = "noSynonymsAsSuggestions";
+  private static final String INCLUDE_TRACKED_CHANGES_KEY = "includeTrackedChanges";
+  private static final String ENABLE_TMP_OFF_RULES_KEY = "enableTmpOffRules";
+  private static final String ENABLE_GOAL_SPECIFIC_RULES_KEY = "enableGoalSpecificRules";
   private static final String SAVE_LO_CACHE_KEY = "saveLoCache";
   private static final String LT_VERSION_KEY = "ltVersion";
 
@@ -191,8 +197,11 @@ public class Configuration {
   private boolean useOtherServer = DEFAULT_USE_OTHER_SERVER;
   private boolean isPremium = DEFAULT_IS_PREMIUM;
   private boolean markSingleCharBold = DEFAULT_MARK_SINGLE_CHAR_BOLD;
-  private boolean useLtDictionary = DEFAULT_USE_LT_DICTIONARY;
+  private boolean useLtSpellChecker = DEFAULT_USE_LT_SPELL_CHECKER;
   private boolean noSynonymsAsSuggestions = DEFAULT_NO_SYNONYMS_AS_SUGGESTIONS;
+  private boolean includeTrackedChanges = DEFAULT_INCLUDE_TRACKED_CHANGES;
+  private boolean enableTmpOffRules = DEFAULT_ENABLE_TMP_OFF_RULES;
+  private boolean enableGoalSpecificRules = DEFAULT_ENABLE_GOAL_SPECIFIC_RULES;
   private boolean saveLoCache = DEFAULT_SAVE_LO_CACHE;
   private String externalRuleDirectory;
   private String lookAndFeelName;
@@ -281,8 +290,11 @@ public class Configuration {
     useOtherServer = DEFAULT_USE_OTHER_SERVER;
     isPremium = DEFAULT_IS_PREMIUM;
     markSingleCharBold = DEFAULT_MARK_SINGLE_CHAR_BOLD;
-    useLtDictionary = DEFAULT_USE_LT_DICTIONARY;
+    useLtSpellChecker = DEFAULT_USE_LT_SPELL_CHECKER;
     noSynonymsAsSuggestions = DEFAULT_NO_SYNONYMS_AS_SUGGESTIONS;
+    includeTrackedChanges = DEFAULT_INCLUDE_TRACKED_CHANGES;
+    enableTmpOffRules = DEFAULT_ENABLE_TMP_OFF_RULES;
+    enableGoalSpecificRules = DEFAULT_ENABLE_GOAL_SPECIFIC_RULES;
     saveLoCache = DEFAULT_SAVE_LO_CACHE;
     externalRuleDirectory = null;
     lookAndFeelName = null;
@@ -337,8 +349,11 @@ public class Configuration {
     this.useOtherServer = configuration.useOtherServer;
     this.isPremium = configuration.isPremium;
     this.markSingleCharBold = configuration.markSingleCharBold;
-    this.useLtDictionary = configuration.useLtDictionary;
+    this.useLtSpellChecker = configuration.useLtSpellChecker;
     this.noSynonymsAsSuggestions = configuration.noSynonymsAsSuggestions;
+    this.includeTrackedChanges = configuration.includeTrackedChanges;
+    this.enableTmpOffRules = configuration.enableTmpOffRules;
+    this.enableGoalSpecificRules = configuration.enableGoalSpecificRules;
     this.saveLoCache = configuration.saveLoCache;
     this.otherServerUrl = configuration.otherServerUrl;
     this.remoteUsername = configuration.remoteUsername;
@@ -431,6 +446,14 @@ public class Configuration {
   public void removeDisabledRuleIds(Set<String> ruleIds) {
     disabledRuleIds.removeAll(ruleIds);
     enabledRuleIds.addAll(ruleIds);
+  }
+
+  public void removeDisabledRuleId(String ruleId) {
+    disabledRuleIds.remove(ruleId);
+  }
+
+  public void removeEnabledRuleId(String ruleId) {
+    enabledRuleIds.remove(ruleId);
   }
 
   public void setEnabledRuleIds(Set<String> ruleIds) {
@@ -556,12 +579,12 @@ public class Configuration {
     return markSingleCharBold;
   }
   
-  public void setUseLtDictionary(boolean useLtDictionary) {
-    this.useLtDictionary = useLtDictionary;
+  public void setUseLtSpellChecker(boolean useLtSpellChecker) {
+    this.useLtSpellChecker = useLtSpellChecker;
   }
 
-  public boolean useLtDictionary() {
-    return useLtDictionary;
+  public boolean useLtSpellChecker() {
+    return useLtSpellChecker;
   }
   
   public void setNoSynonymsAsSuggestions(boolean noSynonymsAsSuggestions) {
@@ -570,6 +593,30 @@ public class Configuration {
 
   public boolean noSynonymsAsSuggestions() {
     return noSynonymsAsSuggestions;
+  }
+  
+  public void setIncludeTrackedChanges(boolean includeTrackedChanges) {
+    this.includeTrackedChanges = includeTrackedChanges;
+  }
+
+  public boolean includeTrackedChanges() {
+    return includeTrackedChanges;
+  }
+  
+  public void setEnableTmpOffRules(boolean enableTmpOffRules) {
+    this.enableTmpOffRules = enableTmpOffRules;
+  }
+
+  public boolean enableTmpOffRules() {
+    return enableTmpOffRules;
+  }
+  
+  public void setEnableGoalSpecificRules(boolean enableGoalSpecificRules) {
+    this.enableGoalSpecificRules = enableGoalSpecificRules;
+  }
+
+  public boolean enableGoalSpecificRules() {
+    return enableGoalSpecificRules;
   }
   
   public void setSaveLoCache(boolean saveLoCache) {
@@ -1321,14 +1368,29 @@ public class Configuration {
       markSingleCharBold = Boolean.parseBoolean(markSingleCharBoldString);
     }
     
-    String useLtDictionaryString = (String) props.get(prefix + USE_LT_DICTIONARY_KEY);
-    if (useLtDictionaryString != null) {
-      useLtDictionary = Boolean.parseBoolean(useLtDictionaryString);
+    String useLtSpellCheckerString = (String) props.get(prefix + USE_LT_SPELL_CHECKER_KEY);
+    if (useLtSpellCheckerString != null) {
+      useLtSpellChecker = Boolean.parseBoolean(useLtSpellCheckerString);
     }
     
     String noSynonymsAsSuggestionsString = (String) props.get(prefix + NO_SYNONYMS_AS_SUGGESTIONS_KEY);
     if (noSynonymsAsSuggestionsString != null) {
       noSynonymsAsSuggestions = Boolean.parseBoolean(noSynonymsAsSuggestionsString);
+    }
+    
+    String includeTrackedChangesString = (String) props.get(prefix + INCLUDE_TRACKED_CHANGES_KEY);
+    if (includeTrackedChangesString != null) {
+      includeTrackedChanges = Boolean.parseBoolean(includeTrackedChangesString);
+    }
+    
+    String enableTmpOffRulesString = (String) props.get(prefix + ENABLE_TMP_OFF_RULES_KEY);
+    if (enableTmpOffRulesString != null) {
+      enableTmpOffRules = Boolean.parseBoolean(enableTmpOffRulesString);
+    }
+    
+    String enableGoalSpecificRulesString = (String) props.get(prefix + ENABLE_GOAL_SPECIFIC_RULES_KEY);
+    if (enableGoalSpecificRulesString != null) {
+      enableGoalSpecificRules = Boolean.parseBoolean(enableGoalSpecificRulesString);
     }
     
     String saveLoCacheString = (String) props.get(prefix + SAVE_LO_CACHE_KEY);
@@ -1558,8 +1620,11 @@ public class Configuration {
     allProfileKeys.add(REMOTE_USERNAME_KEY);
     allProfileKeys.add(REMOTE_APIKEY_KEY);
     allProfileKeys.add(MARK_SINGLE_CHAR_BOLD_KEY);
-    allProfileKeys.add(USE_LT_DICTIONARY_KEY);
+    allProfileKeys.add(USE_LT_SPELL_CHECKER_KEY);
     allProfileKeys.add(NO_SYNONYMS_AS_SUGGESTIONS_KEY);
+    allProfileKeys.add(INCLUDE_TRACKED_CHANGES_KEY);
+    allProfileKeys.add(ENABLE_TMP_OFF_RULES_KEY);
+    allProfileKeys.add(ENABLE_GOAL_SPECIFIC_RULES_KEY);
     allProfileKeys.add(SAVE_LO_CACHE_KEY);
 
     allProfileLangKeys.add(DISABLED_RULES_KEY);
@@ -1659,11 +1724,20 @@ public class Configuration {
     if (markSingleCharBold != DEFAULT_MARK_SINGLE_CHAR_BOLD) {
       props.setProperty(prefix + MARK_SINGLE_CHAR_BOLD_KEY, Boolean.toString(markSingleCharBold));
     }
-    if (useLtDictionary != DEFAULT_USE_LT_DICTIONARY) {
-      props.setProperty(prefix + USE_LT_DICTIONARY_KEY, Boolean.toString(useLtDictionary));
+    if (useLtSpellChecker != DEFAULT_USE_LT_SPELL_CHECKER) {
+      props.setProperty(prefix + USE_LT_SPELL_CHECKER_KEY, Boolean.toString(useLtSpellChecker));
     }
     if (noSynonymsAsSuggestions != DEFAULT_NO_SYNONYMS_AS_SUGGESTIONS) {
       props.setProperty(prefix + NO_SYNONYMS_AS_SUGGESTIONS_KEY, Boolean.toString(noSynonymsAsSuggestions));
+    }
+    if (includeTrackedChanges != DEFAULT_INCLUDE_TRACKED_CHANGES) {
+      props.setProperty(prefix + INCLUDE_TRACKED_CHANGES_KEY, Boolean.toString(includeTrackedChanges));
+    }
+    if (enableTmpOffRules != DEFAULT_ENABLE_TMP_OFF_RULES) {
+      props.setProperty(prefix + ENABLE_TMP_OFF_RULES_KEY, Boolean.toString(enableTmpOffRules));
+    }
+    if (enableGoalSpecificRules != DEFAULT_ENABLE_GOAL_SPECIFIC_RULES) {
+      props.setProperty(prefix + ENABLE_GOAL_SPECIFIC_RULES_KEY, Boolean.toString(enableGoalSpecificRules));
     }
     if (saveLoCache != DEFAULT_SAVE_LO_CACHE) {
       props.setProperty(prefix + SAVE_LO_CACHE_KEY, Boolean.toString(saveLoCache));

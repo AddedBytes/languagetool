@@ -51,7 +51,12 @@ public class SpanishTagger extends BaseTagger {
   private static final Pattern ADJ_MS = Pattern.compile("AQ.MS.|AQ.CS.|AQ.MN.");
   private static final Pattern NO_PREFIXES_FOR_ADJ = Pattern.compile("(anti|pre|ex|pro|afro|ultra|super|súper)",
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-    
+  
+  // adjectives with prefix + more than two syllables
+  private static final Pattern PREFIXES_FOR_ADJECTIVES = Pattern
+      .compile("(super)(.*[aeiouàéèíòóïü].+[aeiouàéèíòóïü].*)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+  private static final Pattern ADJ_VP = Pattern.compile("AQ.*|V.P.*");
+  
   public SpanishTagger() {
     super("/es/es-ES.dict", new Locale("es"));
   }
@@ -63,7 +68,24 @@ public class SpanishTagger extends BaseTagger {
     int pos = 0;
     final IStemmer dictLookup = new DictionaryLookup(getDictionary());
 
-    for (String word : sentenceTokens) {
+    for (int i=0; i<sentenceTokens.size(); i++) {
+      String word = sentenceTokens.get(i);
+      String previousWord = "";
+      String nextWord = "";
+      if (i > 0 ) {
+        previousWord = sentenceTokens.get(i - 1);
+      }
+      if (i < sentenceTokens.size() - 1) {
+        nextWord = sentenceTokens.get(i + 1);
+      }
+      boolean containsTypographicApostrophe = false;
+      if (word.length() > 1 || previousWord.equalsIgnoreCase("l") || previousWord.equalsIgnoreCase("d")
+        || nextWord.equalsIgnoreCase("s")) {
+        if (word.contains("’")) {
+          containsTypographicApostrophe = true;
+          word = word.replaceAll("’", "'");
+        }
+      }
       final List<AnalyzedToken> l = new ArrayList<>();
       final String lowerWord = word.toLowerCase(locale);
       final boolean isLowercase = word.equals(lowerWord);
@@ -91,10 +113,17 @@ public class SpanishTagger extends BaseTagger {
       if (l.isEmpty() && !isMixedCase) {
         addTokens(additionalTags(word, dictLookup), l);
       }
+      // emoji
+      if (l.isEmpty() && StringTools.isEmoji(word)) {
+        l.add(new AnalyzedToken(word, "_emoji_", "_emoji_"));
+      }
       if (l.isEmpty()) {
         l.add(new AnalyzedToken(word, null, null));
       }
       AnalyzedTokenReadings atr = new AnalyzedTokenReadings(l, pos);
+      if (containsTypographicApostrophe) {
+        atr.setTypographicApostrophe();
+      }
       tokenReadings.add(atr);
       pos += word.length();
     }
@@ -151,6 +180,25 @@ public class SpanishTagger extends BaseTagger {
         final String posTag = taggerToken.getPOSTag();
         if (posTag != null) {
           final Matcher m = VERB.matcher(posTag);
+          if (m.matches()) {
+            String lemma = matcher.group(1).toLowerCase().concat(taggerToken.getLemma());
+            additionalTaggedTokens.add(new AnalyzedToken(word, posTag, lemma));
+          }
+        }
+      }
+      return additionalTaggedTokens;
+    }
+    
+     // Any well-formed adejctive with prefixes is tagged as a verb copying the original
+    // tags
+    matcher = PREFIXES_FOR_ADJECTIVES.matcher(word);
+    if (matcher.matches()) {
+      final String possibleVerb = matcher.group(2).toLowerCase();
+      List<AnalyzedToken> taggerTokens = asAnalyzedTokenList(possibleVerb, dictLookup.lookup(possibleVerb));
+      for (AnalyzedToken taggerToken : taggerTokens) {
+        final String posTag = taggerToken.getPOSTag();
+        if (posTag != null) {
+          final Matcher m = ADJ_VP.matcher(posTag);
           if (m.matches()) {
             String lemma = matcher.group(1).toLowerCase().concat(taggerToken.getLemma());
             additionalTaggedTokens.add(new AnalyzedToken(word, posTag, lemma));

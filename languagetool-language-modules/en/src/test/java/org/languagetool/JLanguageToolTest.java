@@ -24,6 +24,10 @@ import org.languagetool.JLanguageTool.ParagraphHandling;
 import org.languagetool.language.AmericanEnglish;
 import org.languagetool.language.BritishEnglish;
 import org.languagetool.language.English;
+import org.languagetool.language.CanadianEnglish;
+import org.languagetool.language.NewZealandEnglish;
+import org.languagetool.language.SouthAfricanEnglish;
+import org.languagetool.language.AustralianEnglish;
 import org.languagetool.markup.AnnotatedText;
 import org.languagetool.markup.AnnotatedTextBuilder;
 import org.languagetool.rules.*;
@@ -138,9 +142,10 @@ public class JLanguageToolTest {
           "The territory of Metropolitan France was settled by Celtic tribes known as Gauls. France reached its political and military zenith in the early 19th century under Napoleon Bonaparte, subjugating much of continental Europe and establishing the First French Empire. The French Revolutionary and Napoleonic Wars shaped the course of European and world history. The collapse of the empire initiated a period of relative decline, in which France endured a tumultuous succession of governments until the founding of the French Third Republic during the Franco-Prussian War in 1870. Subsequent decades saw a period of optimism, cultural and scientific flourishing, as well as economic prosperity known as the Belle Époque. France was one of the major participants of World War I, from which it emerged victorious at great human and economic cost. It was among the Allied powers of World War II, but was soon occupied by the Axis in 1940. France was plunged into a series of dynastic conflicts involving England. The second half of the 16th century was dominated by religious civil wars. The short-lived Fourth Republic was established and later dissolved during the Algerian War. The current Fifth Republic was formed in 1958 by Charles de Gaulle.",
           lt);
       // 4 previous matches within 80 tokens
-      assertOneError(
-          "The territory of Metropolitan France was settled by Celtic tribes known as Gauls. France was plunged into a series of dynastic conflicts involving England. The second half of the 16th century was dominated by religious civil wars. The short-lived Fourth Republic was established and later dissolved during the Algerian War. The current Fifth Republic was formed in 1958 by Charles de Gaulle. ",
-          lt);
+      // the match for this text is from a picky rule
+      // so we need to call check with the correct level
+      List<RuleMatch> matches = lt.check("The territory of Metropolitan France was settled by Celtic tribes known as Gauls. France was plunged into a series of dynastic conflicts involving England. The second half of the 16th century was dominated by religious civil wars. The short-lived Fourth Republic was established and later dissolved during the Algerian War. The current Fifth Republic was formed in 1958 by Charles de Gaulle. ", JLanguageTool.Level.PICKY);
+      assertEquals("Expected one match", 1, matches.size());
     }
   }
 
@@ -194,6 +199,12 @@ public class JLanguageToolTest {
         tool.getAnalyzedSentence("This is a test\u00aded sentence.").toString());
     //test paragraph ends adding
     assertEquals("<S> </S><P/> ", tool.getAnalyzedSentence("\n").toString());
+    
+    //test vertical tab as white space
+    String sentence = "I'm a cool test\u000Bwith a line";
+    AnalyzedSentence aSentence = tool.getAnalyzedSentence(sentence);
+    assertEquals(aSentence.getTokens()[9].isWhitespace(), true);
+    assertEquals(aSentence.getTokens()[10].isWhitespaceBefore(), true);
   }
 
   @Test
@@ -310,5 +321,23 @@ public class JLanguageToolTest {
     assertEquals(lang.toAdvancedTypography("Did you mean <suggestion>Language's</suggestion> (straight apostrophe) or <suggestion>Language’s</suggestion> (curly apostrophe)?"), "Did you mean “Language's” (straight apostrophe) or “Language’s” (curly apostrophe)?");
     assertEquals(lang.toAdvancedTypography("Did you mean <suggestion>Language’s</suggestion> (curly apostrophe) or <suggestion>Language's</suggestion> (straight apostrophe)?"), "Did you mean “Language’s” (curly apostrophe) or “Language's” (straight apostrophe)?");
     assertEquals(lang.toAdvancedTypography("Did you mean <suggestion>|?</suggestion>"), "Did you mean “|?”");
+  }
+  
+  @Test 
+  public void testAdaptSuggestions() throws IOException {
+    JLanguageTool tool = new JLanguageTool(new AmericanEnglish());
+    List<RuleMatch> matches = tool.check("Whatever their needs, we doesn't never disappoint them.");
+    assertEquals(matches.get(0).getSuggestedReplacements().toString(), "[n't,  never]"); 
+  }
+  
+  @Test
+  public void testEnglishVariants() throws IOException {
+    String sentence = "This is a test.";
+    String sentence2 = "This is an test.";
+    for (String langCode : new String[] { "en-US", "en-AU", "en-GB", "en-CA", "en-ZA", "en-NZ" }) {
+      JLanguageTool lt = new JLanguageTool(Languages.getLanguageForShortCode(langCode));
+      assertEquals(0, lt.check(sentence).size());
+      assertEquals(1, lt.check(sentence2).size());
+    }
   }
 }

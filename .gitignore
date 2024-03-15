@@ -2,6 +2,7 @@
 *sw?
 *.iml
 *.bak
+.wti
 .class
 .classpath
 .idea
@@ -12,6 +13,7 @@
 .vscode/
 build
 target
+target-ide
 atomFeedChecksDB
 derby.log
 .surefire-*
